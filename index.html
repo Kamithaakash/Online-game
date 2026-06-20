@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HeartPlay - Real-Time Couples Game Hub</title>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+  <!-- PeerJS P2P Networking -->
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <!-- Canvas Confetti for celebrations -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+  <!-- Animated Background Hearts Canvas -->
+  <div class="bg-hearts-container" id="bgHeartsContainer"></div>
+
+  <!-- Main Container -->
+  <main class="app-container">
+    <!-- Theme Toggle & Settings Bar -->
+    <header class="app-bar">
+      <div class="logo">
+        <span class="heart-icon">💖</span>
+        <h1>HeartPlay</h1>
+      </div>
+      <div class="app-actions">
+        <button id="howToPlayBtn" class="icon-btn" title="How to Play">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+        </button>
+        <button id="soundToggleBtn" class="icon-btn" title="Toggle Sound">
+          <svg id="soundOnIcon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+          <svg id="soundOffIcon" class="hidden" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- SECTION 1: LOBBY & SETUP -->
+    <section id="lobbyScreen" class="screen active">
+      <div class="hero-section">
+        <h2 class="fredoka">Connect & Play Together</h2>
+        <p>A sweet, real-time gaming space designed for couples, even when miles apart. Play "Letter Link" and test your sync!</p>
+      </div>
+
+      <div class="glass-card nickname-card">
+        <div class="form-group">
+          <label for="nicknameInput">Your Nickname</label>
+          <input type="text" id="nicknameInput" maxlength="15" placeholder="Enter your name (e.g. Juliet)" autocomplete="off">
+        </div>
+      </div>
+
+      <div class="lobby-choices">
+        <!-- HOST CARD -->
+        <div class="glass-card choice-card" id="hostCard">
+          <div class="card-icon">🏠</div>
+          <h3>Host a Love Nest</h3>
+          <p>Create a private room and invite your partner to join you instantly.</p>
+          <button id="createRoomBtn" class="btn btn-primary">Create Room</button>
+
+          <!-- Room Link Panel (Hidden initially) -->
+          <div id="roomDetailsPanel" class="room-details hidden">
+            <div class="divider"></div>
+            <p class="share-text">Share this room code with your partner:</p>
+            <div class="code-container">
+              <span id="roomCodeDisplay" class="room-code">HEART-XXXX</span>
+              <button id="copyCodeBtn" class="btn btn-small" title="Copy Code">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+              </button>
+            </div>
+            <div class="pulse-loader"></div>
+            <span class="status-msg">Waiting for partner to link up...</span>
+          </div>
+        </div>
+
+        <!-- JOIN CARD -->
+        <div class="glass-card choice-card" id="joinCard">
+          <div class="card-icon">🔑</div>
+          <h3>Join Your Partner</h3>
+          <p>Enter the code shared by your partner to step into your shared nest.</p>
+          <div class="join-input-group">
+            <input type="text" id="joinCodeInput" placeholder="e.g. HEART-1234" autocomplete="off">
+            <button id="joinRoomBtn" class="btn btn-secondary">Join Nest</button>
+          </div>
+          <span id="joinErrorMsg" class="error-msg hidden"></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 2: GAME BOARD -->
+    <section id="gameScreen" class="screen">
+      <!-- Game Info & Scores -->
+      <div class="game-header-stats glass-card">
+        <!-- Player A (Host) -->
+        <div class="player-stat-card" id="playerHostCard">
+          <span class="avatar">💖</span>
+          <div class="player-info">
+            <span class="player-name" id="hostPlayerName">Player 1</span>
+            <div class="player-score">
+              <span class="hearts-score" id="hostScoreHearts">❤️</span>
+              <span class="score-num" id="hostScoreNum">(0)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- VS status -->
+        <div class="vs-indicator">
+          <div class="vs-badge">VS</div>
+          <span class="room-badge" id="activeRoomBadge">Room Code</span>
+        </div>
+
+        <!-- Player B (Joiner) -->
+        <div class="player-stat-card" id="playerJoinerCard">
+          <span class="avatar">💙</span>
+          <div class="player-info">
+            <span class="player-name" id="joinerPlayerName">Player 2</span>
+            <div class="player-score">
+              <span class="hearts-score" id="joinerScoreHearts">❤️</span>
+              <span class="score-num" id="joinerScoreNum">(0)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Play Area Grid -->
+      <div class="play-grid">
+        <!-- Game Area Card -->
+        <div class="glass-card main-game-card">
+          <!-- Game State Container: Dynamic content loaded via JS -->
+          <div class="game-board-inner">
+            
+            <!-- Round / State Header -->
+            <div class="round-status-bar">
+              <span id="roundCounter" class="round-counter">Round 1</span>
+              <button id="changeGameBtn" class="btn btn-small btn-secondary hidden">🎮 Change Game</button>
+              <span id="gameTurnIndicator" class="turn-badge">Setting Up...</span>
+            </div>
+
+            <!-- DYNAMIC SCREEN 1: Word Setup -->
+            <div id="stepWordSetup" class="game-step-view active">
+              <div class="instruction-block">
+                <span class="step-num">Step 1</span>
+                <h3>Set the Starting Letter</h3>
+                <p id="wordSetupDesc">Waiting for starting player...</p>
+              </div>
+              <div class="input-action-wrapper" id="wordSetupInputArea">
+                <div class="letter-picker-container" style="flex-grow: 1; display: flex; flex-direction: column; gap: 0.5rem;">
+                  <input type="text" id="baseWordInput" placeholder="Starting Letter" maxlength="1" autocomplete="off" style="text-align: center; font-family: var(--font-heading); font-size: 1.5rem; text-transform: uppercase;">
+                  <span class="input-helper" style="text-align: left; font-size: 0.75rem; color: var(--color-text-muted);">Enter any letter (A-Z) to start the constraints.</span>
+                </div>
+                <button id="submitBaseWordBtn" class="btn btn-primary">Lock Letter</button>
+              </div>
+              <div class="waiting-animation hidden" id="wordSetupWaiting">
+                <div class="love-loader">❤️</div>
+                <p>Waiting for partner to set starting letter...</p>
+              </div>
+            </div>
+
+            <!-- DYNAMIC SCREEN 2: Letter Constraint Setup -->
+            <div id="stepLetterSetup" class="game-step-view">
+              <div class="instruction-block">
+                <span class="step-num">Step 2</span>
+                <h3>Set the Target Ending Letter</h3>
+                <p id="letterSetupDesc">Waiting for partner...</p>
+              </div>
+              <div class="last-letter-banner">
+                <span class="banner-title">Starting Letter:</span>
+                <span id="lastLetterDisplay" class="letter-badge">E</span>
+              </div>
+              
+              <div class="input-action-wrapper" id="letterSetupInputArea">
+                <div class="letter-picker-container">
+                  <input type="text" id="endingLetterInput" placeholder="Ending Letter" maxlength="1" autocomplete="off">
+                  <span class="input-helper">Select any letter (A-Z) except the starting letter.</span>
+                </div>
+                <button id="submitEndingLetterBtn" class="btn btn-primary">Lock Letter</button>
+              </div>
+
+              <div class="waiting-animation hidden" id="letterSetupWaiting">
+                <div class="love-loader">💛</div>
+                <p>Waiting for partner to choose ending letter...</p>
+              </div>
+            </div>
+
+            <!-- DYNAMIC SCREEN 3: The Race! -->
+            <div id="stepRace" class="game-step-view">
+              <div class="instruction-block">
+                <span class="step-num">Step 3</span>
+                <h3 class="race-title animation-pulse">Word Race! 🏁</h3>
+                <p>Be the first to type a valid word matching the criteria below.</p>
+              </div>
+
+              <!-- Countdown Timer -->
+              <div class="race-timer-container" id="raceTimerContainer">
+                <span class="timer-icon">⏰</span>
+                <span id="raceCountdown">15</span>s
+              </div>
+
+              <div class="criteria-container">
+                <div class="criteria-card">
+                  <span class="label">Starts With</span>
+                  <span id="raceStartLetter" class="letter-badge gold">T</span>
+                </div>
+                <div class="criteria-connector">➔</div>
+                <div class="criteria-card">
+                  <span class="label">Ends With</span>
+                  <span id="raceEndLetter" class="letter-badge gold">S</span>
+                </div>
+              </div>
+
+              <!-- Live race typing feedback area -->
+              <div class="race-typing-box">
+                <div class="input-with-validation">
+                  <input type="text" id="raceWordInput" placeholder="Type word here..." autocomplete="off">
+                  <div class="typing-validation-icon" id="wordValidationIndicator"></div>
+                </div>
+                <button id="submitRaceWordBtn" class="btn btn-primary btn-large">SUBMIT WORD 🚀</button>
+              </div>
+
+              <div class="typing-status-indicator" id="opponentTypingStatus">
+                Partner is typing...
+              </div>
+
+              <!-- Quick rules helper -->
+              <div class="race-tip">
+                💡 Target word must be a real English word. First to hit submit wins!
+              </div>
+            </div>
+
+            <!-- DYNAMIC SCREEN 4: Round Results -->
+            <div id="stepRoundResult" class="game-step-view">
+              <div class="result-banner" id="resultBanner">
+                <span class="result-emoji" id="resultEmoji">🎉</span>
+                <h3 id="resultTitle">Juliet Won the Round!</h3>
+                <p id="resultWordDetail">Submitted word: <strong>TRUSTS</strong> (Valid!)</p>
+              </div>
+
+              <div class="result-score-highlight">
+                <div class="mini-score">
+                  <span id="resultHostName">Player A</span>: <span id="resultHostScore">0</span>
+                </div>
+                <div class="mini-vs">/</div>
+                <div class="mini-score">
+                  <span id="resultJoinerName">Player B</span>: <span id="resultJoinerScore">0</span>
+                </div>
+              </div>
+
+              <div class="next-round-controls">
+                <button id="nextRoundBtn" class="btn btn-primary">Start Next Round</button>
+                <button id="playAgainBtn" class="btn btn-secondary hidden">Play Again</button>
+              </div>
+            </div>
+
+            <!-- DYNAMIC SCREEN: Game Selector -->
+            <div id="stepGameSelector" class="game-step-view">
+              <div class="instruction-block">
+                <h3 class="fredoka">Choose a Game to Play</h3>
+                <p id="gameSelectorDesc">Select a romantic or fun activity to play together.</p>
+              </div>
+              <div class="game-selection-grid" id="gameSelectionGrid">
+                <!-- Game 1: Letter Link -->
+                <div class="game-select-card" id="selectLetterLinkCard">
+                  <div class="game-card-icon">🔤</div>
+                  <h4>Letter Link</h4>
+                  <p>A fast-paced word race. Pick letters and type words before your partner does!</p>
+                  <button class="btn btn-primary btn-select-game" data-game="LETTER_LINK">Play Letter Link</button>
+                </div>
+                <!-- Game 2: SOS -->
+                <div class="game-select-card" id="selectSosCard">
+                  <div class="game-card-icon">⭕</div>
+                  <h4>SOS Classic</h4>
+                  <p>Take turns placing S or O on a grid. Form S-O-S sequences to score points and get extra turns!</p>
+                  <button class="btn btn-primary btn-select-game" data-game="SOS">Play SOS</button>
+                </div>
+                <!-- Game 3: Sync Quiz -->
+                <div class="game-select-card" id="selectQuizCard">
+                  <div class="game-card-icon">💖</div>
+                  <h4>Sync Quiz</h4>
+                  <p>Answer cute relationship questions secretly, then reveal them together to check your synergy!</p>
+                  <button class="btn btn-primary btn-select-game" data-game="QUIZ">Play Sync Quiz</button>
+                </div>
+                <!-- Game 4: Rock Paper Scissors -->
+                <div class="game-select-card" id="selectRpsCard">
+                  <div class="game-card-icon">✂️</div>
+                  <h4>Rock Paper Scissors</h4>
+                  <p>A classic visual battle of wits. Choose Rock, Paper, or Scissors secretly and reveal them together!</p>
+                  <button class="btn btn-primary btn-select-game" data-game="RPS">Play RPS</button>
+                </div>
+              </div>
+              <div class="waiting-animation hidden" id="gameSelectorWaiting">
+                <div class="love-loader">💝</div>
+                <p>Waiting for partner to choose a game...</p>
+              </div>
+            </div>
+
+            <!-- DYNAMIC SCREEN: SOS Play -->
+            <div id="stepSosPlay" class="game-step-view">
+              <div class="sos-controls">
+                <div class="sos-letter-picker">
+                  <span class="picker-label">Your Letter:</span>
+                  <div class="sos-letter-options">
+                    <label class="sos-opt-label">
+                      <input type="radio" name="sosLetter" value="S" checked>
+                      <span class="sos-opt-btn">S</span>
+                    </label>
+                    <label class="sos-opt-label">
+                      <input type="radio" name="sosLetter" value="O">
+                      <span class="sos-opt-btn">O</span>
+                    </label>
+                  </div>
+                </div>
+                <div class="sos-scores-display">
+                  <span class="sos-score-badge host">Host: <span id="sosHostScore">0</span></span>
+                  <span class="sos-score-badge client">Partner: <span id="sosClientScore">0</span></span>
+                </div>
+              </div>
+              <div class="sos-grid" id="sosGridContainer">
+                <!-- 6x6 grid generated via JS -->
+              </div>
+              <div class="sos-tip">
+                💡 Complete "S-O-S" vertically, horizontally, or diagonally to score a point and earn another turn!
+              </div>
+            </div>
+
+            <!-- DYNAMIC SCREEN: SOS Result -->
+            <div id="stepSosResult" class="game-step-view">
+              <div class="result-banner">
+                <span class="result-emoji" id="sosResultEmoji">🏆</span>
+                <h3 id="sosResultTitle">Host Won!</h3>
+                <p id="sosResultDetail">Final Score: 5 vs 3</p>
+              </div>
+              <div class="next-round-controls">
+                <button id="restartSosBtn" class="btn btn-primary">Play Again</button>
+                <button id="exitSosBtn" class="btn btn-secondary">Back to Lobby</button>
+              </div>
+            </div>
+
+            <!-- DYNAMIC SCREEN: Sync Quiz Play -->
+            <div id="stepQuizPlay" class="game-step-view">
+              <div class="quiz-question-card glass-card">
+                <span class="quiz-badge">Question <span id="quizQuestionNum">1</span>/10</span>
+                <h3 id="quizQuestionText">Where was our first date?</h3>
+              </div>
+              
+              <div class="quiz-input-area" id="quizInputArea">
+                <textarea id="quizAnswerInput" placeholder="Type your answer here... Be honest and cute!" maxlength="150" rows="3"></textarea>
+                <button id="submitQuizAnswerBtn" class="btn btn-primary">Lock Answer 🔒</button>
+              </div>
+              
+              <div class="waiting-animation hidden" id="quizWaitingPartner">
+                <div class="love-loader">💬</div>
+                <p>Waiting for partner to finish answering...</p>
+              </div>
+            </div>
+
+            <!-- DYNAMIC SCREEN: Sync Quiz Reveal -->
+            <div id="stepQuizReveal" class="game-step-view">
+              <div class="quiz-question-card glass-card">
+                <h3>Question: <span id="quizRevealQuestionText">Where was our first date?</span></h3>
+              </div>
+              <div class="quiz-reveal-grid">
+                <div class="quiz-reveal-card host-card">
+                  <span class="card-role" id="quizRevealHostName">Host</span>
+                  <div class="quiz-reveal-answer" id="quizRevealHostAnswer">...</div>
+                </div>
+                <div class="quiz-reveal-card client-card">
+                  <span class="card-role" id="quizRevealClientName">Partner</span>
+                  <div class="quiz-reveal-answer" id="quizRevealClientAnswer">...</div>
+                </div>
+              </div>
+              
+              <div class="quiz-evaluate-controls" id="quizEvaluateArea">
+                <p class="evaluation-title">Do your answers match?</p>
+                <div class="flex-center-gap">
+                  <button id="quizMatchBtn" class="btn btn-primary btn-success">Yes, We Sync! ❤️</button>
+                  <button id="quizMismatchBtn" class="btn btn-secondary btn-danger">No, Mismatch 💔</button>
+                </div>
+              </div>
+              <div class="waiting-animation hidden" id="quizEvaluateWaiting">
+                <div class="love-loader">💞</div>
+                <p>Waiting for Host to evaluate the match...</p>
+              </div>
+            </div>
+
+            <!-- DYNAMIC SCREEN: Sync Quiz Result -->
+            <div id="stepQuizResult" class="game-step-view">
+              <div class="result-banner">
+                <div class="love-loader" style="font-size: 4rem;">💖</div>
+                <h3 id="quizResultTitle">Quiz Finished!</h3>
+                <div class="sync-meter-container">
+                  <div class="sync-meter-bar">
+                    <div class="sync-meter-fill" id="quizSyncMeterFill" style="width: 70%;"></div>
+                  </div>
+                  <span class="sync-percentage" id="quizSyncPercentage">70% Synced</span>
+                </div>
+                <p id="quizResultDetail" class="quiz-result-description">You guys are cute, but there's room to grow! Keep talking.</p>
+              </div>
+              <div class="next-round-controls">
+                <button id="restartQuizBtn" class="btn btn-primary">Play Again</button>
+                <button id="exitQuizBtn" class="btn btn-secondary">Back to Lobby</button>
+              </div>
+            </div>
+
+            <!-- DYNAMIC SCREEN: Rock Paper Scissors Play -->
+            <div id="stepRpsPlay" class="game-step-view">
+              <div class="instruction-block">
+                <span class="step-num">Rochambeau</span>
+                <h3>Choose Your Weapon</h3>
+                <p id="rpsPlayDesc">Select rock, paper, or scissors secretly. It will reveal once you both lock in!</p>
+              </div>
+              
+              <div class="rps-choices-container" id="rpsWeaponSelector">
+                <button class="btn rps-btn" data-weapon="rock">
+                  <span class="weapon-emoji">🪨</span>
+                  <span class="weapon-label">Rock</span>
+                </button>
+                <button class="btn rps-btn" data-weapon="paper">
+                  <span class="weapon-emoji">✉️</span>
+                  <span class="weapon-label">Love Letter</span>
+                </button>
+                <button class="btn rps-btn" data-weapon="scissors">
+                  <span class="weapon-emoji">✂️</span>
+                  <span class="weapon-label">Scissors</span>
+                </button>
+              </div>
+              
+              <div class="waiting-animation hidden" id="rpsWaitingPartner">
+                <div class="love-loader">🔒</div>
+                <p id="rpsWaitingText">Waiting for partner to choose...</p>
+              </div>
+            </div>
+
+            <!-- DYNAMIC SCREEN: Rock Paper Scissors Reveal -->
+            <div id="stepRpsReveal" class="game-step-view">
+              <div class="instruction-block">
+                <h3>The Reveal!</h3>
+                <p>Let's see who wins the clash!</p>
+              </div>
+              
+              <div class="rps-reveal-grid">
+                <div class="rps-reveal-card host-card" id="rpsRevealHostCard">
+                  <span class="card-role" id="rpsRevealHostRole">Host</span>
+                  <span class="rps-reveal-emoji" id="rpsRevealHostEmoji">🪨</span>
+                  <span class="rps-reveal-label" id="rpsRevealHostLabel">Rock</span>
+                </div>
+                <div class="rps-reveal-card client-card" id="rpsRevealClientCard">
+                  <span class="card-role" id="rpsRevealClientRole">Partner</span>
+                  <span class="rps-reveal-emoji" id="rpsRevealClientEmoji">✉️</span>
+                  <span class="rps-reveal-label" id="rpsRevealClientLabel">Love Letter</span>
+                </div>
+              </div>
+              
+              <div class="result-banner border-pink" style="margin-top: 1.5rem; width: 100%; max-width: 480px;" id="rpsResultBanner">
+                <span class="result-emoji" id="rpsResultEmoji">🎉</span>
+                <h3 id="rpsResultTitle">Love Letter wraps the Rock!</h3>
+                <p id="rpsResultDetail">Juliet won the clash!</p>
+              </div>
+              
+              <div class="next-round-controls" style="margin-top: 1.5rem;">
+                <button id="restartRpsBtn" class="btn btn-primary">Play Another Round</button>
+                <button id="exitRpsBtn" class="btn btn-secondary">Back to Lobby</button>
+              </div>
+            </div>
+
+
+          </div>
+        </div>
+
+        <!-- Activity Feed Sidebar -->
+        <div class="glass-card log-card">
+          <div class="log-header">
+            <h4>Activity Feed</h4>
+            <button id="clearLogBtn" class="btn-clear-log" title="Clear Feed">Clear</button>
+          </div>
+          <div id="activityLog" class="activity-log-content">
+            <div class="log-entry system-entry">Welcome to HeartPlay! Create or join a room to start.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Chat & Floaty Reactions Floating Bar -->
+      <footer class="reaction-dock">
+        <span class="dock-label">Send Reaction:</span>
+        <div class="reaction-buttons">
+          <button class="react-btn" data-emoji="💖">💖</button>
+          <button class="react-btn" data-emoji="🔥">🔥</button>
+          <button class="react-btn" data-emoji="😂">😂</button>
+          <button class="react-btn" data-emoji="😭">😭</button>
+          <button class="react-btn" data-emoji="😲">😲</button>
+          <button class="react-btn" data-emoji="👑">👑</button>
+        </div>
+      </footer>
+    </section>
+  </main>
+
+  <!-- MODAL: HOW TO PLAY -->
+  <div id="howToPlayModal" class="modal-overlay hidden">
+    <div class="glass-card modal-content">
+      <div class="modal-header">
+        <h3 class="fredoka">How to Play "Letter Link"</h3>
+        <button id="closeModalBtn" class="modal-close-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <ol class="rules-list">
+          <li><strong>Connect:</strong> One player hosts a room, copies the code, and shares it with their partner. The other player joins.</li>
+          <li><strong>Step 1 (Starting Letter):</strong> One player chooses a starting letter for the round (e.g. <code>L</code>).</li>
+          <li><strong>Step 2 (Ending Letter):</strong> The other player chooses a target ending letter (e.g. <code>E</code>).</li>
+          <li><strong>Step 3 (The Race):</strong> Both players race to type a valid English word starting with the starting letter and ending with the ending letter (e.g. starts with <code>L</code>, ends with <code>E</code>, like <code>LOVE</code>).</li>
+          <li><strong>Winning:</strong> The first player to submit a valid word wins the round. We automatically query an English dictionary database, and also support a <em>Partner Approval</em> fallback in case of slang or local jokes!</li>
+        </ol>
+        <p class="rules-note">💡 Sound effects and visual feedback keep the pace fast. Swap turns and see how many points you can rack up!</p>
+      </div>
+      <div class="modal-footer">
+        <button id="closeModalOkBtn" class="btn btn-primary">Got it! ❤️</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: PARTNER APPROVAL REQUEST (Love Pass Dialog) -->
+  <div id="partnerApprovalModal" class="modal-overlay hidden">
+    <div class="glass-card modal-content border-pink">
+      <div class="modal-header">
+        <h3 class="fredoka">❤️ Love Pass Request</h3>
+      </div>
+      <div class="modal-body text-center">
+        <p id="approvalRequestMsg">Your partner typed a word, but it isn't in the standard English dictionary.</p>
+        <div class="word-challenge-box" id="challengeWordDisplay">SLANGWORD</div>
+        <p class="challenge-subtext">Do you accept this as a valid word for this round?</p>
+      </div>
+      <div class="modal-footer flex-center-gap">
+        <button id="approveWordBtn" class="btn btn-primary btn-success">Yes, Accept ❤️</button>
+        <button id="rejectWordBtn" class="btn btn-secondary btn-danger">No, Deny ❌</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: WAITING FOR APPROVAL DIALOG -->
+  <div id="waitingApprovalModal" class="modal-overlay hidden">
+    <div class="glass-card modal-content">
+      <div class="modal-header">
+        <h3 class="fredoka">Checking Word Validity...</h3>
+      </div>
+      <div class="modal-body text-center">
+        <div class="love-loader pulse">❤️</div>
+        <p>Your word isn't in the dictionary! Waiting for your partner's approval ("Love Pass")...</p>
+      </div>
+    </div>
+  </div>
+  
+  <script src="app.js"></script>
+</body>
+</html>
