@@ -180,6 +180,110 @@ class SoundFX {
     osc2.start(now + 0.08);
     osc2.stop(now + 0.08 + 0.2);
   }
+
+  playKiss() {
+    if (!this.enabled) return;
+    this.init();
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(300, now);
+    osc.frequency.exponentialRampToValueAtTime(1000, now + 0.05);
+    osc.frequency.exponentialRampToValueAtTime(150, now + 0.1);
+    gain.gain.setValueAtTime(0.01, now);
+    gain.gain.linearRampToValueAtTime(0.06, now + 0.05);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.12);
+  }
+
+  playSpank() {
+    if (!this.enabled) return;
+    this.init();
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(800, now);
+    osc.frequency.exponentialRampToValueAtTime(100, now + 0.08);
+    gain.gain.setValueAtTime(0.2, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.1);
+  }
+
+  playTickle() {
+    if (!this.enabled) return;
+    this.init();
+    const now = this.ctx.currentTime;
+    const notes = [600, 750, 600, 750, 900];
+    notes.forEach((freq, idx) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, now + idx * 0.05);
+      gain.gain.setValueAtTime(0.03, now + idx * 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.05 + 0.04);
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(now + idx * 0.05);
+      osc.stop(now + idx * 0.05 + 0.05);
+    });
+  }
+
+  playNibble() {
+    if (!this.enabled) return;
+    this.init();
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(150, now);
+    osc.frequency.linearRampToValueAtTime(80, now + 0.15);
+    gain.gain.setValueAtTime(0.05, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.15);
+  }
+
+  playHug() {
+    if (!this.enabled) return;
+    this.init();
+    const now = this.ctx.currentTime;
+    const osc1 = this.ctx.createOscillator();
+    const osc2 = this.ctx.createOscillator();
+    const gain1 = this.ctx.createGain();
+    const gain2 = this.ctx.createGain();
+    
+    osc1.type = 'sine';
+    osc1.frequency.setValueAtTime(329.63, now);
+    osc1.frequency.linearRampToValueAtTime(392.00, now + 0.25);
+    gain1.gain.setValueAtTime(0.06, now);
+    gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+    
+    osc2.type = 'sine';
+    osc2.frequency.setValueAtTime(392.00, now);
+    osc2.frequency.linearRampToValueAtTime(493.88, now + 0.25);
+    gain2.gain.setValueAtTime(0.06, now);
+    gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+    
+    osc1.connect(gain1);
+    gain1.connect(this.ctx.destination);
+    osc2.connect(gain2);
+    gain2.connect(this.ctx.destination);
+    
+    osc1.start(now);
+    osc1.stop(now + 0.35);
+    osc2.start(now);
+    osc2.stop(now + 0.35);
+  }
 }
 
 const sound = new SoundFX();
@@ -194,8 +298,6 @@ let raceTimerInterval = null;
 let lastTimeLeft = null;
 
 // Chat Widget State
-let isChatOpen = false;
-let chatUnreadCount = 0;
 let chatTypingTimeout = null;
 
 let gameState = {
@@ -519,12 +621,7 @@ document.querySelectorAll('.react-btn').forEach(btn => {
   });
 });
 
-// Activity logger reset
-document.getElementById('clearLogBtn').addEventListener('click', () => {
-  sound.playTap();
-  const logContent = document.getElementById('activityLog');
-  logContent.innerHTML = `<div class="log-entry system-entry">Feed cleared. Room: ${document.getElementById('activeRoomBadge').textContent}</div>`;
-});
+
 
 // ==========================================================================
 // NETWORK LAYER - PEERJS HOST/JOIN
@@ -762,6 +859,10 @@ function handleIncomingMessage(data) {
       case 'CHAT_TYPING':
         handleChatTyping(data.isTyping);
         break;
+
+      case 'CHAT_STICKER':
+        processLocalSticker(data.stickerId, 'partner');
+        break;
     }
   } else {
     // --- CLIENT HANDLERS ---
@@ -797,6 +898,10 @@ function handleIncomingMessage(data) {
 
       case 'CHAT_TYPING':
         handleChatTyping(data.isTyping);
+        break;
+
+      case 'CHAT_STICKER':
+        processLocalSticker(data.stickerId, 'partner');
         break;
     }
   }
@@ -1430,78 +1535,20 @@ function handleRaceWordRejected(reason) {
     submitBtn.textContent = "SUBMIT WORD 🚀";
   }
   
-  // Show localized tip
-  const logEl = document.getElementById('activityLog');
-  const errEntry = document.createElement('div');
-  errEntry.className = 'log-entry';
-  errEntry.style.borderColor = 'var(--danger)';
-  errEntry.style.background = 'rgba(230,57,70,0.06)';
-  errEntry.textContent = reason;
-  logEl.appendChild(errEntry);
-  logEl.scrollTop = logEl.scrollHeight;
+  // Show localized tip inline in chat sidebar
+  addLog(reason, 'system');
 }
 
-// Local dictionary word set loaded from sowpods dictionary file
-const localDictionary = new Set();
-let localDictionaryLoaded = false;
-
-// Load the local dictionary file on startup
-async function loadLocalDictionary() {
-  try {
-    const res = await fetch('dictionary.txt');
-    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-    const text = await res.text();
-    const words = text.split(/\r?\n/);
-    for (let word of words) {
-      const w = word.trim().toUpperCase();
-      if (w) {
-        localDictionary.add(w);
-      }
-    }
-    localDictionaryLoaded = true;
-    console.log(`Loaded ${localDictionary.size} words from local dictionary.`);
-  } catch (err) {
-    console.error("Failed to load local dictionary, will fallback to online API: ", err);
-  }
-}
-
-// Start loading the local dictionary immediately
-loadLocalDictionary();
-
-// Dictionary lookup cache to speed up subsequent checks
-const dictionaryCache = {};
-
-// Real-time Dictionary Validation
+// Real-time Dictionary Validation using embedded dictionary.js data
 async function checkWordInDictionary(word) {
   const cleanWord = word.trim().toUpperCase();
-  const lowerWord = cleanWord.toLowerCase();
   
-  // 1. Check local dictionary first if it is loaded (instant offline lookup!)
-  if (localDictionaryLoaded && localDictionary.size > 0) {
-    return localDictionary.has(cleanWord);
+  if (typeof dictionaryData !== 'undefined' && dictionaryData instanceof Set) {
+    return dictionaryData.has(cleanWord);
   }
-
-  // 2. Fallback to online dictionary lookup (if local dictionary was not loaded or is empty)
-  if (dictionaryCache[lowerWord] !== undefined) {
-    return dictionaryCache[lowerWord];
-  }
-
-  const controller = new AbortController();
-  const id = setTimeout(() => controller.abort(), 800); // 800ms timeout for faster feedback
-
-  try {
-    const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(lowerWord)}`, {
-      signal: controller.signal
-    });
-    clearTimeout(id);
-    const isValid = res.status === 200;
-    dictionaryCache[lowerWord] = isValid;
-    return isValid;
-  } catch (err) {
-    clearTimeout(id);
-    console.error("Dictionary API fetch failed or timed out: ", err);
-    return false; // Force fallback to partner review modal on error
-  }
+  
+  console.error("Dictionary data is missing!");
+  return false; 
 }
 
 // Client typing states
@@ -1528,12 +1575,7 @@ function switchScreen(screenId) {
 
 // Log view details
 function addLog(text, type = 'system') {
-  const logContent = document.getElementById('activityLog');
-  const entry = document.createElement('div');
-  entry.className = `log-entry ${type}-entry`;
-  entry.textContent = text;
-  logContent.appendChild(entry);
-  logContent.scrollTop = logContent.scrollHeight;
+  // Feed removed as per user request
 }
 
 function showError(msg, side = 'join') {
@@ -2096,7 +2138,7 @@ function renderUI() {
 function triggerConfettiShower() {
   if (typeof confetti === 'function') {
     confetti({
-      particleCount: 100,
+        particleCount: 100,
       spread: 70,
       origin: { y: 0.6 }
     });
@@ -2104,14 +2146,21 @@ function triggerConfettiShower() {
 }
 
 // ==========================================================================
-// CHAT WIDGET FUNCTIONALITY
+// CHAT SIDEBAR & STICKERS FUNCTIONALITY
 // ==========================================================================
+
+// CHAT WIDGET & STICKERS FUNCTIONALITY
+// ==========================================================================
+
+let isChatOpen = false;
+let chatUnreadCount = 0;
 
 function initChatWidget() {
   const chatToggleBtn = document.getElementById('chatToggleBtn');
   const chatCloseBtn = document.getElementById('chatCloseBtn');
   const chatSendBtn = document.getElementById('chatSendBtn');
   const chatInput = document.getElementById('chatInput');
+  const clearChatBtn = document.getElementById('clearChatBtn');
 
   if (chatToggleBtn) {
     chatToggleBtn.addEventListener('click', () => {
@@ -2144,6 +2193,79 @@ function initChatWidget() {
       sendChatTypingIndicator(true);
       resetChatTypingTimeout();
     });
+  }
+
+  if (clearChatBtn) {
+    clearChatBtn.addEventListener('click', () => {
+      sound.playTap();
+      const chatMessages = document.getElementById('chatMessages');
+      if (chatMessages) {
+        chatMessages.innerHTML = '';
+        addLog(`Chat cleared.`, 'system');
+      }
+    });
+  }
+
+  // Bind emoji buttons
+  document.querySelectorAll('.emoji-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const emoji = e.currentTarget.getAttribute('data-emoji');
+      sound.playTap();
+      sendChatMessage(emoji);
+    });
+  });
+
+  // Bind sticker buttons
+  document.querySelectorAll('.sticker-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const stickerId = e.currentTarget.getAttribute('data-sticker');
+      sound.playTap();
+      
+      // Send network packet
+      sendNetworkMessage({
+        type: 'CHAT_STICKER',
+        stickerId: stickerId
+      });
+
+      // Handle locally
+      processLocalSticker(stickerId, 'me');
+    });
+  });
+}
+
+function processLocalSticker(stickerId, sender) {
+  const partnerName = (role === 'host') ? gameState.joinerName : gameState.hostName;
+  let logText = '';
+
+  if (stickerId === 'kiss') {
+    sound.playKiss();
+    spawnFloatingReaction('💋');
+    spawnFloatingReaction('❤️');
+    logText = sender === 'me' ? `You sent partner a kiss! 💋❤️` : `${partnerName} sent you a kiss! 💋❤️`;
+  } else if (stickerId === 'hug') {
+    sound.playHug();
+    spawnFloatingReaction('🤗');
+    spawnFloatingReaction('💖');
+    logText = sender === 'me' ? `You sent partner a warm hug! 🤗💖` : `${partnerName} sent you a warm hug! 🤗💖`;
+  } else if (stickerId === 'spank') {
+    sound.playSpank();
+    spawnFloatingReaction('🍑');
+    spawnFloatingReaction('💥');
+    logText = sender === 'me' ? `You spanked partner! 🍑💥` : `${partnerName} spanked you! 🍑💥`;
+  } else if (stickerId === 'tickle') {
+    sound.playTickle();
+    spawnFloatingReaction('😜');
+    spawnFloatingReaction('👉');
+    logText = sender === 'me' ? `You tickled partner! 😜👉` : `${partnerName} tickled you! 😜👉`;
+  } else if (stickerId === 'nibble') {
+    sound.playNibble();
+    spawnFloatingReaction('😈');
+    spawnFloatingReaction('🦷');
+    logText = sender === 'me' ? `You nibbled partner! 😈🦷` : `${partnerName} nibbled you! 😈🦷`;
+  }
+
+  if (logText) {
+    addLog(logText, 'play');
   }
 }
 
@@ -2184,15 +2306,17 @@ function toggleChatPanel(forceState) {
   }
 }
 
-function sendChatMessage() {
+function sendChatMessage(customText) {
   const chatInput = document.getElementById('chatInput');
   if (!chatInput) return;
 
-  const text = chatInput.value.trim();
+  const text = customText !== undefined ? customText.trim() : chatInput.value.trim();
   if (!text) return;
 
-  // Clear input
-  chatInput.value = '';
+  if (customText === undefined) {
+    // Clear input
+    chatInput.value = '';
+  }
 
   // Append locally
   appendChatMessage('me', text);
@@ -2344,18 +2468,28 @@ function updateChatStatus(isOnline) {
     chatInput.disabled = false;
     chatSendBtn.disabled = false;
     
+    // Enable sticker and emoji buttons
+    document.querySelectorAll('.sticker-btn, .emoji-btn').forEach(btn => {
+      btn.disabled = false;
+    });
+    
     const partnerName = (role === 'host') ? gameState.joinerName : gameState.hostName;
     if (placeholderText) {
-      placeholderText.textContent = `Linked with ${partnerName}! Send a sweet message. 💖`;
+      placeholderText.textContent = 'Linked with ' + partnerName + '! Send a sweet message. 💖';
     }
     
     // Add system connected message
-    appendChatMessage('system', `Connected with ${partnerName}!`, true);
+    appendChatMessage('system', 'Connected with ' + partnerName + '!', true);
   } else {
     statusDot.className = 'chat-status-dot offline';
     chatInput.disabled = true;
     chatInput.value = '';
     chatSendBtn.disabled = true;
+    
+    // Disable sticker and emoji buttons
+    document.querySelectorAll('.sticker-btn, .emoji-btn').forEach(btn => {
+      btn.disabled = true;
+    });
     
     if (placeholderText) {
       placeholderText.textContent = 'Link up with your partner using a Room Code to start chatting! 💬';
@@ -2373,5 +2507,5 @@ function updateChatStatus(isOnline) {
   }
 }
 
-// Auto-initialize chat widget on script load
+// Auto-initialize chat sidebar on script load
 initChatWidget();

@@ -46,7 +46,7 @@
       </div>
 
       <div class="glass-card nickname-card">
-        <div class="form-group">
+        <div class="input-group">
           <label for="nicknameInput">Your Nickname</label>
           <input type="text" id="nicknameInput" maxlength="15" placeholder="Enter your name (e.g. Juliet)" autocomplete="off">
         </div>
@@ -468,17 +468,7 @@
           </div>
         </div>
 
-        <!-- Activity Feed Sidebar -->
-        <div class="glass-card log-card">
-          <div class="log-header">
-            <h4>Activity Feed</h4>
-            <button id="clearLogBtn" class="btn-clear-log" title="Clear Feed">Clear</button>
-          </div>
-          <div id="activityLog" class="activity-log-content">
-            <div class="log-entry system-entry">Welcome to HeartPlay! Create or join a room to start.</div>
-          </div>
-        </div>
-      </div>
+
 
       <!-- Quick Chat & Floaty Reactions Floating Bar -->
       <footer class="reaction-dock">
@@ -549,6 +539,7 @@
     </div>
   </div>
 
+
   <!-- FLOATING CHAT WIDGET -->
   <div id="chatWidget" class="chat-widget-container">
     <!-- Chat Toggle Button -->
@@ -564,6 +555,7 @@
           <span class="chat-status-dot offline" id="chatStatusDot"></span>
           <h4>Love Chat</h4>
         </div>
+        <button id="clearChatBtn" class="btn-clear-chat" title="Clear Chat">Clear</button>
         <button id="chatCloseBtn" class="chat-close-btn" title="Close Chat">&times;</button>
       </div>
       
@@ -574,13 +566,34 @@
         </div>
       </div>
       
+      <!-- Cute flirty stickers and emojis row -->
+      <div class="chat-sidebar-actions">
+        <div class="sticker-buttons">
+          <button class="sticker-btn" data-sticker="kiss" title="Send Kiss">Kiss 💋</button>
+          <button class="sticker-btn" data-sticker="hug" title="Send Hug">Hug 🤗</button>
+          <button class="sticker-btn" data-sticker="spank" title="Send Spank">Spank 🍑</button>
+          <button class="sticker-btn" data-sticker="tickle" title="Send Tickle">Tickle 😜</button>
+          <button class="sticker-btn" data-sticker="nibble" title="Send Nibble">Nibble 😈</button>
+        </div>
+        <div class="emoji-buttons">
+          <button class="emoji-btn" data-emoji="💖">💖</button>
+          <button class="emoji-btn" data-emoji="😘">😘</button>
+          <button class="emoji-btn" data-emoji="😍">😍</button>
+          <button class="emoji-btn" data-emoji="🍆">🍆</button>
+          <button class="emoji-btn" data-emoji="🍑">🍑</button>
+          <button class="emoji-btn" data-emoji="😈">😈</button>
+          <button class="emoji-btn" data-emoji="💋">💋</button>
+        </div>
+      </div>
+      
       <div class="chat-input-area">
         <input type="text" id="chatInput" placeholder="Type a message..." maxlength="150" autocomplete="off" disabled>
         <button id="chatSendBtn" class="btn btn-primary btn-small" disabled>Send</button>
       </div>
     </div>
   </div>
-  
+    
+  <script src="dictionary.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
