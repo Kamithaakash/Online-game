@@ -180,6 +180,110 @@ class SoundFX {
     osc2.start(now + 0.08);
     osc2.stop(now + 0.08 + 0.2);
   }
+
+  playKiss() {
+    if (!this.enabled) return;
+    this.init();
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(300, now);
+    osc.frequency.exponentialRampToValueAtTime(1000, now + 0.05);
+    osc.frequency.exponentialRampToValueAtTime(150, now + 0.1);
+    gain.gain.setValueAtTime(0.01, now);
+    gain.gain.linearRampToValueAtTime(0.06, now + 0.05);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.12);
+  }
+
+  playSpank() {
+    if (!this.enabled) return;
+    this.init();
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(800, now);
+    osc.frequency.exponentialRampToValueAtTime(100, now + 0.08);
+    gain.gain.setValueAtTime(0.2, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.1);
+  }
+
+  playTickle() {
+    if (!this.enabled) return;
+    this.init();
+    const now = this.ctx.currentTime;
+    const notes = [600, 750, 600, 750, 900];
+    notes.forEach((freq, idx) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, now + idx * 0.05);
+      gain.gain.setValueAtTime(0.03, now + idx * 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.05 + 0.04);
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(now + idx * 0.05);
+      osc.stop(now + idx * 0.05 + 0.05);
+    });
+  }
+
+  playNibble() {
+    if (!this.enabled) return;
+    this.init();
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(150, now);
+    osc.frequency.linearRampToValueAtTime(80, now + 0.15);
+    gain.gain.setValueAtTime(0.05, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.15);
+  }
+
+  playHug() {
+    if (!this.enabled) return;
+    this.init();
+    const now = this.ctx.currentTime;
+    const osc1 = this.ctx.createOscillator();
+    const osc2 = this.ctx.createOscillator();
+    const gain1 = this.ctx.createGain();
+    const gain2 = this.ctx.createGain();
+    
+    osc1.type = 'sine';
+    osc1.frequency.setValueAtTime(329.63, now);
+    osc1.frequency.linearRampToValueAtTime(392.00, now + 0.25);
+    gain1.gain.setValueAtTime(0.06, now);
+    gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+    
+    osc2.type = 'sine';
+    osc2.frequency.setValueAtTime(392.00, now);
+    osc2.frequency.linearRampToValueAtTime(493.88, now + 0.25);
+    gain2.gain.setValueAtTime(0.06, now);
+    gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+    
+    osc1.connect(gain1);
+    gain1.connect(this.ctx.destination);
+    osc2.connect(gain2);
+    gain2.connect(this.ctx.destination);
+    
+    osc1.start(now);
+    osc1.stop(now + 0.35);
+    osc2.start(now);
+    osc2.stop(now + 0.35);
+  }
 }
 
 const sound = new SoundFX();
@@ -194,8 +298,6 @@ let raceTimerInterval = null;
 let lastTimeLeft = null;
 
 // Chat Widget State
-let isChatOpen = false;
-let chatUnreadCount = 0;
 let chatTypingTimeout = null;
 
 let gameState = {
@@ -519,12 +621,7 @@ document.querySelectorAll('.react-btn').forEach(btn => {
   });
 });
 
-// Activity logger reset
-document.getElementById('clearLogBtn').addEventListener('click', () => {
-  sound.playTap();
-  const logContent = document.getElementById('activityLog');
-  logContent.innerHTML = `<div class="log-entry system-entry">Feed cleared. Room: ${document.getElementById('activeRoomBadge').textContent}</div>`;
-});
+
 
 // ==========================================================================
 // NETWORK LAYER - PEERJS HOST/JOIN
@@ -762,6 +859,10 @@ function handleIncomingMessage(data) {
       case 'CHAT_TYPING':
         handleChatTyping(data.isTyping);
         break;
+
+      case 'CHAT_STICKER':
+        processLocalSticker(data.stickerId, 'partner');
+        break;
     }
   } else {
     // --- CLIENT HANDLERS ---
@@ -797,6 +898,10 @@ function handleIncomingMessage(data) {
 
       case 'CHAT_TYPING':
         handleChatTyping(data.isTyping);
+        break;
+
+      case 'CHAT_STICKER':
+        processLocalSticker(data.stickerId, 'partner');
         break;
     }
   }
@@ -1430,15 +1535,8 @@ function handleRaceWordRejected(reason) {
     submitBtn.textContent = "SUBMIT WORD 🚀";
   }
   
-  // Show localized tip
-  const logEl = document.getElementById('activityLog');
-  const errEntry = document.createElement('div');
-  errEntry.className = 'log-entry';
-  errEntry.style.borderColor = 'var(--danger)';
-  errEntry.style.background = 'rgba(230,57,70,0.06)';
-  errEntry.textContent = reason;
-  logEl.appendChild(errEntry);
-  logEl.scrollTop = logEl.scrollHeight;
+  // Show localized tip inline in chat sidebar
+  addLog(reason, 'system');
 }
 
 // Local dictionary word set loaded from sowpods dictionary file
@@ -1528,12 +1626,7 @@ function switchScreen(screenId) {
 
 // Log view details
 function addLog(text, type = 'system') {
-  const logContent = document.getElementById('activityLog');
-  const entry = document.createElement('div');
-  entry.className = `log-entry ${type}-entry`;
-  entry.textContent = text;
-  logContent.appendChild(entry);
-  logContent.scrollTop = logContent.scrollHeight;
+  appendChatMessage('system', text, true, type);
 }
 
 function showError(msg, side = 'join') {
@@ -2096,7 +2189,7 @@ function renderUI() {
 function triggerConfettiShower() {
   if (typeof confetti === 'function') {
     confetti({
-      particleCount: 100,
+        particleCount: 100,
       spread: 70,
       origin: { y: 0.6 }
     });
@@ -2104,28 +2197,13 @@ function triggerConfettiShower() {
 }
 
 // ==========================================================================
-// CHAT WIDGET FUNCTIONALITY
+// CHAT SIDEBAR & STICKERS FUNCTIONALITY
 // ==========================================================================
 
-function initChatWidget() {
-  const chatToggleBtn = document.getElementById('chatToggleBtn');
-  const chatCloseBtn = document.getElementById('chatCloseBtn');
-  const chatSendBtn = document.getElementById('chatSendBtn');
-  const chatInput = document.getElementById('chatInput');
-
-  if (chatToggleBtn) {
-    chatToggleBtn.addEventListener('click', () => {
-      sound.playTap();
-      toggleChatPanel();
-    });
-  }
-
-  if (chatCloseBtn) {
-    chatCloseBtn.addEventListener('click', () => {
-      sound.playTap();
-      toggleChatPanel(false);
-    });
-  }
+function initSidebarChat() {
+  const chatSendBtn = document.getElementById('sidebarChatSendBtn');
+  const chatInput = document.getElementById('sidebarChatInput');
+  const clearChatBtn = document.getElementById('clearChatBtn');
 
   if (chatSendBtn) {
     chatSendBtn.addEventListener('click', () => {
@@ -2145,54 +2223,92 @@ function initChatWidget() {
       resetChatTypingTimeout();
     });
   }
-}
 
-function toggleChatPanel(forceState) {
-  const chatPanel = document.getElementById('chatPanel');
-  const chatBadge = document.getElementById('chatBadge');
-  const chatToggleBtn = document.getElementById('chatToggleBtn');
-  
-  if (forceState !== undefined) {
-    isChatOpen = forceState;
-  } else {
-    isChatOpen = !isChatOpen;
+  if (clearChatBtn) {
+    clearChatBtn.addEventListener('click', () => {
+      sound.playTap();
+      const chatMessages = document.getElementById('sidebarChatMessages');
+      if (chatMessages) {
+        chatMessages.innerHTML = '';
+        addLog(`Feed cleared.`, 'system');
+      }
+    });
   }
 
-  if (isChatOpen) {
-    chatPanel.classList.remove('hidden');
-    chatUnreadCount = 0;
-    if (chatBadge) {
-      chatBadge.classList.add('hidden');
-      chatBadge.textContent = '0';
-    }
-    if (chatToggleBtn) {
-      chatToggleBtn.classList.remove('chat-btn-pulse');
-    }
-    
-    // Scroll messages to bottom and focus
-    const chatMessages = document.getElementById('chatMessages');
-    if (chatMessages) {
-      chatMessages.scrollTop = chatMessages.scrollHeight;
-    }
-    
-    const chatInput = document.getElementById('chatInput');
-    if (chatInput && !chatInput.disabled) {
-      setTimeout(() => chatInput.focus(), 100);
-    }
-  } else {
-    chatPanel.classList.add('hidden');
+  // Bind emoji buttons
+  document.querySelectorAll('.emoji-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const emoji = e.currentTarget.getAttribute('data-emoji');
+      sound.playTap();
+      sendChatMessage(emoji);
+    });
+  });
+
+  // Bind sticker buttons
+  document.querySelectorAll('.sticker-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const stickerId = e.currentTarget.getAttribute('data-sticker');
+      sound.playTap();
+      
+      // Send network packet
+      sendNetworkMessage({
+        type: 'CHAT_STICKER',
+        stickerId: stickerId
+      });
+
+      // Handle locally
+      processLocalSticker(stickerId, 'me');
+    });
+  });
+}
+
+function processLocalSticker(stickerId, sender) {
+  const partnerName = (role === 'host') ? gameState.joinerName : gameState.hostName;
+  let logText = '';
+
+  if (stickerId === 'kiss') {
+    sound.playKiss();
+    spawnFloatingReaction('💋');
+    spawnFloatingReaction('❤️');
+    logText = sender === 'me' ? `You sent partner a kiss! 💋❤️` : `${partnerName} sent you a kiss! 💋❤️`;
+  } else if (stickerId === 'hug') {
+    sound.playHug();
+    spawnFloatingReaction('🤗');
+    spawnFloatingReaction('💖');
+    logText = sender === 'me' ? `You sent partner a warm hug! 🤗💖` : `${partnerName} sent you a warm hug! 🤗💖`;
+  } else if (stickerId === 'spank') {
+    sound.playSpank();
+    spawnFloatingReaction('🍑');
+    spawnFloatingReaction('💥');
+    logText = sender === 'me' ? `You spanked partner! 🍑💥` : `${partnerName} spanked you! 🍑💥`;
+  } else if (stickerId === 'tickle') {
+    sound.playTickle();
+    spawnFloatingReaction('😜');
+    spawnFloatingReaction('👉');
+    logText = sender === 'me' ? `You tickled partner! 😜👉` : `${partnerName} tickled you! 😜👉`;
+  } else if (stickerId === 'nibble') {
+    sound.playNibble();
+    spawnFloatingReaction('😈');
+    spawnFloatingReaction('🦷');
+    logText = sender === 'me' ? `You nibbled partner! 😈🦷` : `${partnerName} nibbled you! 😈🦷`;
+  }
+
+  if (logText) {
+    addLog(logText, 'play');
   }
 }
 
-function sendChatMessage() {
-  const chatInput = document.getElementById('chatInput');
+function sendChatMessage(customText) {
+  const chatInput = document.getElementById('sidebarChatInput');
   if (!chatInput) return;
 
-  const text = chatInput.value.trim();
+  const text = customText !== undefined ? customText.trim() : chatInput.value.trim();
   if (!text) return;
 
-  // Clear input
-  chatInput.value = '';
+  if (customText === undefined) {
+    // Clear input
+    chatInput.value = '';
+  }
 
   // Append locally
   appendChatMessage('me', text);
@@ -2215,27 +2331,7 @@ function sendChatMessage() {
 
 function receiveChatMessage(text) {
   appendChatMessage('partner', text);
-  
-  if (isChatOpen) {
-    sound.playChatReceived();
-  } else {
-    chatUnreadCount++;
-    const chatBadge = document.getElementById('chatBadge');
-    if (chatBadge) {
-      chatBadge.textContent = chatUnreadCount;
-      chatBadge.classList.remove('hidden');
-    }
-    
-    const chatToggleBtn = document.getElementById('chatToggleBtn');
-    if (chatToggleBtn) {
-      chatToggleBtn.classList.remove('chat-btn-pulse');
-      // trigger browser reflow to restart animation
-      void chatToggleBtn.offsetWidth;
-      chatToggleBtn.classList.add('chat-btn-pulse');
-    }
-    
-    sound.playChatReceived();
-  }
+  sound.playChatReceived();
 }
 
 function sendChatTypingIndicator(isTyping) {
@@ -2255,7 +2351,7 @@ function resetChatTypingTimeout() {
 }
 
 function handleChatTyping(isTyping) {
-  const chatMessages = document.getElementById('chatMessages');
+  const chatMessages = document.getElementById('sidebarChatMessages');
   if (!chatMessages) return;
 
   // Remove existing typing indicator
@@ -2266,7 +2362,7 @@ function handleChatTyping(isTyping) {
 
   if (isTyping) {
     // Hide placeholder
-    const placeholder = document.getElementById('chatPlaceholder');
+    const placeholder = document.getElementById('sidebarChatPlaceholder');
     if (placeholder) {
       placeholder.style.display = 'none';
     }
@@ -2284,17 +2380,17 @@ function handleChatTyping(isTyping) {
   }
 }
 
-function appendChatMessage(sender, text, isSystem = false) {
-  const chatMessages = document.getElementById('chatMessages');
+function appendChatMessage(sender, text, isSystem = false, systemType = 'system') {
+  const chatMessages = document.getElementById('sidebarChatMessages');
   if (!chatMessages) return;
 
   // Hide placeholder
-  const placeholder = document.getElementById('chatPlaceholder');
+  const placeholder = document.getElementById('sidebarChatPlaceholder');
   if (placeholder) {
     placeholder.style.display = 'none';
   }
 
-  // Remove typing indicator if it exists, to insert message before it or just re-add it
+  // Remove typing indicator if it exists, to insert message before it
   const typingIndicator = chatMessages.querySelector('.chat-typing-indicator');
   if (typingIndicator) {
     typingIndicator.remove();
@@ -2303,7 +2399,7 @@ function appendChatMessage(sender, text, isSystem = false) {
   const messageEl = document.createElement('div');
   
   if (isSystem) {
-    messageEl.className = 'chat-system-msg';
+    messageEl.className = `chat-system-msg ${systemType}-entry`;
     messageEl.textContent = text;
   } else {
     messageEl.className = `chat-bubble ${sender === 'me' ? 'sent' : 'received'}`;
@@ -2330,12 +2426,12 @@ function appendChatMessage(sender, text, isSystem = false) {
 }
 
 function updateChatStatus(isOnline) {
-  const statusDot = document.getElementById('chatStatusDot');
-  const chatInput = document.getElementById('chatInput');
-  const chatSendBtn = document.getElementById('chatSendBtn');
-  const placeholderText = document.getElementById('chatPlaceholderText');
-  const placeholder = document.getElementById('chatPlaceholder');
-  const chatMessages = document.getElementById('chatMessages');
+  const statusDot = document.getElementById('sidebarChatStatusDot');
+  const chatInput = document.getElementById('sidebarChatInput');
+  const chatSendBtn = document.getElementById('sidebarChatSendBtn');
+  const placeholderText = document.getElementById('sidebarChatPlaceholderText');
+  const placeholder = document.getElementById('sidebarChatPlaceholder');
+  const chatMessages = document.getElementById('sidebarChatMessages');
 
   if (!statusDot || !chatInput || !chatSendBtn) return;
 
@@ -2343,6 +2439,11 @@ function updateChatStatus(isOnline) {
     statusDot.className = 'chat-status-dot online';
     chatInput.disabled = false;
     chatSendBtn.disabled = false;
+    
+    // Enable sticker and emoji buttons
+    document.querySelectorAll('.sticker-btn, .emoji-btn').forEach(btn => {
+      btn.disabled = false;
+    });
     
     const partnerName = (role === 'host') ? gameState.joinerName : gameState.hostName;
     if (placeholderText) {
@@ -2356,6 +2457,11 @@ function updateChatStatus(isOnline) {
     chatInput.disabled = true;
     chatInput.value = '';
     chatSendBtn.disabled = true;
+    
+    // Disable sticker and emoji buttons
+    document.querySelectorAll('.sticker-btn, .emoji-btn').forEach(btn => {
+      btn.disabled = true;
+    });
     
     if (placeholderText) {
       placeholderText.textContent = 'Link up with your partner using a Room Code to start chatting! 💬';
@@ -2373,5 +2479,5 @@ function updateChatStatus(isOnline) {
   }
 }
 
-// Auto-initialize chat widget on script load
-initChatWidget();
+// Auto-initialize chat sidebar on script load
+initSidebarChat();

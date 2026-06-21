@@ -468,14 +468,46 @@
           </div>
         </div>
 
-        <!-- Activity Feed Sidebar -->
-        <div class="glass-card log-card">
-          <div class="log-header">
-            <h4>Activity Feed</h4>
-            <button id="clearLogBtn" class="btn-clear-log" title="Clear Feed">Clear</button>
+        <!-- Love Chat & Activity Feed Sidebar -->
+        <div class="glass-card chat-sidebar">
+          <div class="chat-sidebar-header">
+            <div class="chat-sidebar-title-group">
+              <span class="chat-status-dot offline" id="sidebarChatStatusDot"></span>
+              <h4>Love Chat & Feed</h4>
+            </div>
+            <button id="clearChatBtn" class="btn-clear-chat" title="Clear Chat">Clear</button>
           </div>
-          <div id="activityLog" class="activity-log-content">
-            <div class="log-entry system-entry">Welcome to HeartPlay! Create or join a room to start.</div>
+          
+          <div id="sidebarChatMessages" class="chat-sidebar-messages">
+            <div class="chat-placeholder" id="sidebarChatPlaceholder">
+              <div class="heart-pulse">💖</div>
+              <p id="sidebarChatPlaceholderText">Link up with your partner using a Room Code to start chatting! 💬</p>
+            </div>
+          </div>
+          
+          <!-- Cute flirty stickers and emojis row -->
+          <div class="chat-sidebar-actions">
+            <div class="sticker-buttons">
+              <button class="sticker-btn" data-sticker="kiss" title="Send Kiss">Kiss 💋</button>
+              <button class="sticker-btn" data-sticker="hug" title="Send Hug">Hug 🤗</button>
+              <button class="sticker-btn" data-sticker="spank" title="Send Spank">Spank 🍑</button>
+              <button class="sticker-btn" data-sticker="tickle" title="Send Tickle">Tickle 😜</button>
+              <button class="sticker-btn" data-sticker="nibble" title="Send Nibble">Nibble 😈</button>
+            </div>
+            <div class="emoji-buttons">
+              <button class="emoji-btn" data-emoji="💖">💖</button>
+              <button class="emoji-btn" data-emoji="😘">😘</button>
+              <button class="emoji-btn" data-emoji="😍">😍</button>
+              <button class="emoji-btn" data-emoji="🍆">🍆</button>
+              <button class="emoji-btn" data-emoji="🍑">🍑</button>
+              <button class="emoji-btn" data-emoji="😈">😈</button>
+              <button class="emoji-btn" data-emoji="💋">💋</button>
+            </div>
+          </div>
+          
+          <div class="chat-sidebar-input-area">
+            <input type="text" id="sidebarChatInput" placeholder="Type a message..." maxlength="150" autocomplete="off" disabled>
+            <button id="sidebarChatSendBtn" class="btn btn-primary btn-small" disabled>Send</button>
           </div>
         </div>
       </div>
@@ -549,37 +581,7 @@
     </div>
   </div>
 
-  <!-- FLOATING CHAT WIDGET -->
-  <div id="chatWidget" class="chat-widget-container">
-    <!-- Chat Toggle Button -->
-    <button id="chatToggleBtn" class="chat-toggle-btn" title="Open Love Chat">
-      <span class="chat-icon">💬</span>
-      <span id="chatBadge" class="chat-badge hidden">0</span>
-    </button>
 
-    <!-- Chat Panel -->
-    <div id="chatPanel" class="glass-card chat-panel hidden">
-      <div class="chat-header">
-        <div class="chat-title-group">
-          <span class="chat-status-dot offline" id="chatStatusDot"></span>
-          <h4>Love Chat</h4>
-        </div>
-        <button id="chatCloseBtn" class="chat-close-btn" title="Close Chat">&times;</button>
-      </div>
-      
-      <div id="chatMessages" class="chat-messages">
-        <div class="chat-placeholder" id="chatPlaceholder">
-          <div class="heart-pulse">💖</div>
-          <p id="chatPlaceholderText">Link up with your partner using a Room Code to start chatting! 💬</p>
-        </div>
-      </div>
-      
-      <div class="chat-input-area">
-        <input type="text" id="chatInput" placeholder="Type a message..." maxlength="150" autocomplete="off" disabled>
-        <button id="chatSendBtn" class="btn btn-primary btn-small" disabled>Send</button>
-      </div>
-    </div>
-  </div>
   
   <script src="app.js"></script>
 </body>
