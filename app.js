@@ -329,6 +329,31 @@ let gameState = {
   // Rock Paper Scissors State
   rpsChoices: { host: '', client: '' },
   rpsScores: { host: 0, client: 0 },
+  // Spicy Love Dice State
+  diceCurrentRoll: { action: '', bodyPart: '' },
+  diceWaitingApproval: false,
+  diceScores: { host: 0, client: 0 },
+  // Intimate Truth or Dare State
+  todCurrentPrompt: '',
+  todCurrentType: '', // 'truth' or 'dare'
+  todWaitingApproval: false,
+  todScores: { host: 0, client: 0 },
+  // Never Have I Ever State
+  nhieCurrentPrompt: '',
+  nhieAnswers: { host: '', client: '' },
+  nhieScores: { host: 0, client: 0 }, // optional, if we want to track how many 'I Have's
+  // Erotic Roleplay State
+  rpScenarioTitle: '',
+  rpScenarioDesc: '',
+  rpRoles: { host: '', client: '' },
+  rpObjectives: { host: '', client: '' },
+  // Tease & Command State
+  teaseCommander: '', // 'host' or 'client'
+  teaseOptions: [], // array of 3 command strings
+  teaseChosenCommand: '',
+  // Edge Roulette State
+  rouletteStateText: 'WAIT', // 'WAIT', 'SLOW TEASE', 'FAST STROKES', 'HANDS OFF', 'EDGE', 'FINISH!'
+  rouletteTimer: 0 // seconds left for current state
 };
 
 const cuteNicknames = ['Cupcake', 'Honey', 'Sugar', 'Peanut', 'Cuddlebug', 'Babe', 'Sweetheart', 'Pumpkin', 'Snuggles', 'Lovebird'];
@@ -611,6 +636,118 @@ document.getElementById('exitRpsBtn').addEventListener('click', () => {
   triggerAction({ type: 'ACTION_EXIT_TO_SELECTOR' });
 });
 
+// Spicy Love Dice Controls
+document.getElementById('rollDiceBtn').addEventListener('click', () => {
+  sound.playTap();
+  triggerAction({ type: 'ACTION_DICE_ROLL' });
+});
+
+document.getElementById('diceApproveBtn').addEventListener('click', () => {
+  sound.playTap();
+  triggerAction({ type: 'ACTION_DICE_EVALUATE', approved: true });
+});
+
+document.getElementById('diceRejectBtn').addEventListener('click', () => {
+  sound.playTap();
+  triggerAction({ type: 'ACTION_DICE_EVALUATE', approved: false });
+});
+
+document.getElementById('nextDiceRoundBtn').addEventListener('click', () => {
+  sound.playTap();
+  triggerAction({ type: 'ACTION_NEXT_DICE_ROUND' });
+});
+
+document.getElementById('exitDiceBtn').addEventListener('click', () => {
+  sound.playTap();
+  triggerAction({ type: 'ACTION_EXIT_TO_SELECTOR' });
+});
+
+// --- TRUTH OR DARE LISTENERS ---
+document.getElementById('todTruthBtn').addEventListener('click', () => {
+  sound.playTap();
+  triggerAction({ type: 'ACTION_TOD_CHOICE', choiceType: 'truth' });
+});
+document.getElementById('todDareBtn').addEventListener('click', () => {
+  sound.playTap();
+  triggerAction({ type: 'ACTION_TOD_CHOICE', choiceType: 'dare' });
+});
+document.getElementById('todApproveBtn').addEventListener('click', () => {
+  sound.playTap();
+  triggerAction({ type: 'ACTION_TOD_EVALUATE', approved: true });
+});
+document.getElementById('todRejectBtn').addEventListener('click', () => {
+  sound.playTap();
+  triggerAction({ type: 'ACTION_TOD_EVALUATE', approved: false });
+});
+document.getElementById('nextTodRoundBtn').addEventListener('click', () => {
+  sound.playTap();
+  triggerAction({ type: 'ACTION_NEXT_TOD_ROUND' });
+});
+document.getElementById('exitTodBtn').addEventListener('click', () => {
+  sound.playTap();
+  triggerAction({ type: 'ACTION_EXIT_TO_SELECTOR' });
+});
+
+// --- NEVER HAVE I EVER LISTENERS ---
+document.getElementById('nhieHaveBtn').addEventListener('click', () => {
+  sound.playTap();
+  triggerAction({ type: 'ACTION_NHIE_VOTE', vote: 'have' });
+});
+document.getElementById('nhieHaveNotBtn').addEventListener('click', () => {
+  sound.playTap();
+  triggerAction({ type: 'ACTION_NHIE_VOTE', vote: 'havenot' });
+});
+document.getElementById('nextNhieRoundBtn').addEventListener('click', () => {
+  sound.playTap();
+  triggerAction({ type: 'ACTION_NEXT_NHIE_ROUND' });
+});
+document.getElementById('exitNhieBtn').addEventListener('click', () => {
+  sound.playTap();
+  triggerAction({ type: 'ACTION_EXIT_TO_SELECTOR' });
+});
+
+// --- EROTIC ROLEPLAY LISTENERS ---
+document.getElementById('nextRoleplayBtn').addEventListener('click', () => {
+  sound.playTap();
+  triggerAction({ type: 'ACTION_ROLEPLAY_GENERATE' });
+});
+document.getElementById('exitRoleplayBtn').addEventListener('click', () => {
+  sound.playTap();
+  triggerAction({ type: 'ACTION_EXIT_TO_SELECTOR' });
+});
+
+// --- TEASE & COMMAND LISTENERS ---
+document.getElementById('teaseCmd1').addEventListener('click', () => {
+  sound.playTap();
+  triggerAction({ type: 'ACTION_TEASE_CHOICE', cmdIndex: 0 });
+});
+document.getElementById('teaseCmd2').addEventListener('click', () => {
+  sound.playTap();
+  triggerAction({ type: 'ACTION_TEASE_CHOICE', cmdIndex: 1 });
+});
+document.getElementById('teaseCmd3').addEventListener('click', () => {
+  sound.playTap();
+  triggerAction({ type: 'ACTION_TEASE_CHOICE', cmdIndex: 2 });
+});
+document.getElementById('nextTeaseRoundBtn').addEventListener('click', () => {
+  sound.playTap();
+  triggerAction({ type: 'ACTION_NEXT_TEASE_ROUND' });
+});
+document.getElementById('exitTeaseBtn').addEventListener('click', () => {
+  sound.playTap();
+  triggerAction({ type: 'ACTION_EXIT_TO_SELECTOR' });
+});
+
+// --- EDGE ROULETTE LISTENERS ---
+document.getElementById('rouletteStartBtn').addEventListener('click', () => {
+  sound.playTap();
+  triggerAction({ type: 'ACTION_ROULETTE_START' });
+});
+document.getElementById('exitRouletteBtn').addEventListener('click', () => {
+  sound.playTap();
+  triggerAction({ type: 'ACTION_ROULETTE_EXIT' });
+});
+
 // Reaction Dock Hooks
 document.querySelectorAll('.react-btn').forEach(btn => {
   btn.addEventListener('click', (e) => {
@@ -863,6 +1000,56 @@ function handleIncomingMessage(data) {
       case 'CHAT_STICKER':
         processLocalSticker(data.stickerId, 'partner');
         break;
+        
+      case 'ACTION_DICE_ROLL':
+        processDiceRoll();
+        break;
+      case 'ACTION_DICE_EVALUATE':
+        processDiceEvaluate(data.approved);
+        break;
+      case 'ACTION_NEXT_DICE_ROUND':
+        processNextDiceRound();
+        break;
+        
+      // Truth or Dare
+      case 'ACTION_TOD_CHOICE':
+        processTodChoice(data.choiceType);
+        break;
+      case 'ACTION_TOD_EVALUATE':
+        processTodEvaluate(data.approved);
+        break;
+      case 'ACTION_NEXT_TOD_ROUND':
+        processNextTodRound();
+        break;
+        
+      // Never Have I Ever
+      case 'ACTION_NHIE_VOTE':
+        processNhieVote(data.vote, 'client');
+        break;
+      case 'ACTION_NEXT_NHIE_ROUND':
+        processNextNhieRound();
+        break;
+        
+      // Erotic Roleplay
+      case 'ACTION_ROLEPLAY_GENERATE':
+        processRoleplayGenerate();
+        break;
+        
+      // Tease & Command
+      case 'ACTION_TEASE_CHOICE':
+        processTeaseChoice(data.cmdIndex);
+        break;
+      case 'ACTION_NEXT_TEASE_ROUND':
+        processTeaseNextRound();
+        break;
+        
+      // Edge Roulette
+      case 'ACTION_ROULETTE_START':
+        processRouletteStart();
+        break;
+      case 'ACTION_ROULETTE_EXIT':
+        processRouletteExit();
+        break;
     }
   } else {
     // --- CLIENT HANDLERS ---
@@ -962,6 +1149,55 @@ function triggerAction(action) {
         break;
       case 'ACTION_RPS_RESTART':
         processRpsRestart();
+        break;
+      case 'ACTION_DICE_ROLL':
+        processDiceRoll();
+        break;
+      case 'ACTION_DICE_EVALUATE':
+        processDiceEvaluate(action.approved);
+        break;
+      case 'ACTION_NEXT_DICE_ROUND':
+        processNextDiceRound();
+        break;
+        
+      // Truth or Dare
+      case 'ACTION_TOD_CHOICE':
+        processTodChoice(action.choiceType);
+        break;
+      case 'ACTION_TOD_EVALUATE':
+        processTodEvaluate(action.approved);
+        break;
+      case 'ACTION_NEXT_TOD_ROUND':
+        processNextTodRound();
+        break;
+        
+      // Never Have I Ever
+      case 'ACTION_NHIE_VOTE':
+        processNhieVote(action.vote, 'host');
+        break;
+      case 'ACTION_NEXT_NHIE_ROUND':
+        processNextNhieRound();
+        break;
+        
+      // Erotic Roleplay
+      case 'ACTION_ROLEPLAY_GENERATE':
+        processRoleplayGenerate();
+        break;
+        
+      // Tease & Command
+      case 'ACTION_TEASE_CHOICE':
+        processTeaseChoice(action.cmdIndex);
+        break;
+      case 'ACTION_NEXT_TEASE_ROUND':
+        processTeaseNextRound();
+        break;
+        
+      // Edge Roulette
+      case 'ACTION_ROULETTE_START':
+        processRouletteStart();
+        break;
+      case 'ACTION_ROULETTE_EXIT':
+        processRouletteExit();
         break;
     }
   } else {
@@ -1151,6 +1387,43 @@ function processSelectGame(gameType) {
     gameState.rpsChoices = { host: '', client: '' };
     gameState.rpsScores = { host: 0, client: 0 };
     addLog(`--- Game Mode: Rock Paper Scissors started! ---`, 'system');
+  } else if (gameType === 'DICE') {
+    gameState.status = 'DICE_PLAY';
+    gameState.activePlayer = 'host';
+    gameState.diceCurrentRoll = { action: '', bodyPart: '' };
+    gameState.diceWaitingApproval = false;
+    gameState.diceScores = { host: 0, client: 0 };
+    addLog(`--- Game Mode: Spicy Love Dice started! ---`, 'system');
+  } else if (gameType === 'TOD') {
+    gameState.status = 'TOD_PLAY';
+    gameState.activePlayer = 'host';
+    gameState.todCurrentPrompt = '';
+    gameState.todCurrentType = '';
+    gameState.todWaitingApproval = false;
+    gameState.todScores = { host: 0, client: 0 };
+    addLog(`--- Game Mode: Intimate Truth or Dare started! ---`, 'system');
+  } else if (gameType === 'NHIE') {
+    gameState.status = 'NHIE_PLAY';
+    // NHIE requires a prompt right away to show on the first screen
+    gameState.nhieCurrentPrompt = nhieStatements[Math.floor(Math.random() * nhieStatements.length)];
+    gameState.nhieAnswers = { host: '', client: '' };
+    gameState.nhieScores = { host: 0, client: 0 };
+    addLog(`--- Game Mode: Never Have I Ever started! ---`, 'system');
+  } else if (gameType === 'ROLEPLAY') {
+    gameState.status = 'ROLEPLAY_PLAY';
+    addLog(`--- Game Mode: Erotic Roleplay started! ---`, 'system');
+    processRoleplayGenerate(); // generates first scenario immediately
+  } else if (gameType === 'TEASE') {
+    gameState.status = 'TEASE_PLAY';
+    gameState.teaseCommander = 'host'; // host starts as commander
+    gameState.teaseOptions = generateTeaseOptions();
+    gameState.teaseChosenCommand = '';
+    addLog(`--- Game Mode: Tease & Command started! ---`, 'system');
+  } else if (gameType === 'ROULETTE') {
+    gameState.status = 'ROULETTE_PLAY';
+    gameState.rouletteStateText = 'WAIT';
+    gameState.rouletteTimer = 0;
+    addLog(`--- Game Mode: Edge Roulette started! ---`, 'system');
   }
   
   broadcastState();
@@ -1422,6 +1695,378 @@ function processRpsRestart() {
   broadcastState();
   renderUI();
   sound.playSuccess();
+}
+
+// ==========================================================================
+// SPICY LOVE DICE LOGIC
+// ==========================================================================
+const spicyActions = [
+  "Kiss", "Massage", "Lick", "Nibble", "Tease", "Bite", "Tickle", "Caress", "Blow on", "Suck"
+];
+const spicyBodyParts = [
+  "Neck", "Ear", "Lips", "Thighs", "Stomach", "Collarbone", "Fingers", "Chest", "Cheek", "Back"
+];
+
+function processDiceRoll() {
+  if (gameState.status !== 'DICE_PLAY') return;
+  
+  // Choose random
+  const action = spicyActions[Math.floor(Math.random() * spicyActions.length)];
+  const bodyPart = spicyBodyParts[Math.floor(Math.random() * spicyBodyParts.length)];
+  
+  gameState.diceCurrentRoll = { action, bodyPart };
+  gameState.status = 'DICE_RESULT';
+  gameState.diceWaitingApproval = true;
+  
+  const submitterName = (gameState.activePlayer === 'host') ? gameState.hostName : gameState.joinerName;
+  addLog(`🎲 ${submitterName} rolled: ${action} the ${bodyPart}!`, 'play');
+  
+  broadcastState();
+  renderUI();
+  sound.playSuccess();
+}
+
+function processDiceEvaluate(approved) {
+  if (gameState.status !== 'DICE_RESULT') return;
+  if (!gameState.diceWaitingApproval) return;
+  
+  gameState.diceWaitingApproval = false;
+  
+  const submitterName = (gameState.activePlayer === 'host') ? gameState.hostName : gameState.joinerName;
+  
+  if (approved) {
+    if (gameState.activePlayer === 'host') {
+      gameState.hostScore++;
+      gameState.diceScores.host++;
+    } else {
+      gameState.joinerScore++;
+      gameState.diceScores.client++;
+    }
+    addLog(`❤️ ${submitterName} completed the challenge! (+1 Point)`, 'points');
+    sound.playSuccess();
+  } else {
+    addLog(`❌ Challenge skipped.`, 'system');
+    sound.playBuzzer();
+  }
+
+  broadcastState();
+  renderUI();
+}
+
+function processNextDiceRound() {
+  gameState.status = 'DICE_PLAY';
+  gameState.activePlayer = (gameState.activePlayer === 'host') ? 'client' : 'host';
+  gameState.diceCurrentRoll = { action: '', bodyPart: '' };
+  gameState.diceWaitingApproval = false;
+  gameState.round++;
+  
+  addLog(`--- Dice Round ${gameState.round} Started ---`, 'system');
+  
+  broadcastState();
+  renderUI();
+  sound.playTap();
+}
+
+// ==========================================================================
+// INTIMATE TRUTH OR DARE LOGIC
+// ==========================================================================
+const todTruths = [
+  "What is your biggest sexual fantasy involving us?",
+  "Where is your favorite place to be kissed or touched?",
+  "What's a kink you've always wanted to try but never told me?",
+  "What is the dirtiest dream you've ever had about me?",
+  "What outfit of mine turns you on the most?",
+  "If we could have sex anywhere in the world right now, where would it be?",
+  "What is your favorite memory of us being intimate?",
+  "What's something I do normally that you find incredibly sexy?",
+  "Have you ever masturbated while thinking about me?",
+  "What is the most adventurous place you'd want to get intimate?"
+];
+
+const todDares = [
+  "Take off one piece of my clothing using only your teeth.",
+  "Give me a 2-minute sensual massage anywhere you want.",
+  "Perform a 1-minute striptease for me.",
+  "Kiss your way down my stomach and linger there.",
+  "Whisper your dirtiest thought into my ear.",
+  "Blindfold me and use an ice cube (or warm breath) on my neck.",
+  "Let me take off one piece of your clothing.",
+  "Kiss me passionately for 30 seconds without using your hands.",
+  "Trace my lips with your fingers, then kiss me.",
+  "Sit on my lap and grind for 30 seconds."
+];
+
+function processTodChoice(choiceType) {
+  if (gameState.status !== 'TOD_PLAY') return;
+  
+  const promptList = (choiceType === 'truth') ? todTruths : todDares;
+  const prompt = promptList[Math.floor(Math.random() * promptList.length)];
+  
+  gameState.todCurrentType = choiceType;
+  gameState.todCurrentPrompt = prompt;
+  gameState.status = 'TOD_RESULT';
+  gameState.todWaitingApproval = true;
+  
+  const submitterName = (gameState.activePlayer === 'host') ? gameState.hostName : gameState.joinerName;
+  const emoji = choiceType === 'truth' ? '🗣️' : '😈';
+  addLog(`🔥 ${submitterName} chose ${choiceType.toUpperCase()}! ${emoji}`, 'play');
+  
+  broadcastState();
+  renderUI();
+  sound.playSuccess();
+}
+
+function processTodEvaluate(approved) {
+  if (gameState.status !== 'TOD_RESULT') return;
+  if (!gameState.todWaitingApproval) return;
+  
+  gameState.todWaitingApproval = false;
+  const submitterName = (gameState.activePlayer === 'host') ? gameState.hostName : gameState.joinerName;
+  
+  if (approved) {
+    if (gameState.activePlayer === 'host') {
+      gameState.hostScore++;
+      gameState.todScores.host++;
+    } else {
+      gameState.joinerScore++;
+      gameState.todScores.client++;
+    }
+    addLog(`❤️ ${submitterName} completed the ${gameState.todCurrentType}! (+1 Point)`, 'points');
+    sound.playSuccess();
+  } else {
+    addLog(`❌ Challenge skipped.`, 'system');
+    sound.playBuzzer();
+  }
+
+  broadcastState();
+  renderUI();
+}
+
+function processNextTodRound() {
+  gameState.status = 'TOD_PLAY';
+  gameState.activePlayer = (gameState.activePlayer === 'host') ? 'client' : 'host';
+  gameState.todCurrentPrompt = '';
+  gameState.todCurrentType = '';
+  gameState.todWaitingApproval = false;
+  gameState.round++;
+  
+  addLog(`--- Truth or Dare Round ${gameState.round} Started ---`, 'system');
+  
+  broadcastState();
+  renderUI();
+  sound.playTap();
+}
+
+// ==========================================================================
+// NEVER HAVE I EVER LOGIC
+// ==========================================================================
+const nhieStatements = [
+  "Never have I ever fantasized about a threesome.",
+  "Never have I ever worn lingerie (or gone commando) in public.",
+  "Never have I ever watched porn together with a partner.",
+  "Never have I ever roleplayed in the bedroom.",
+  "Never have I ever sent a nude photo to you.",
+  "Never have I ever faked an orgasm.",
+  "Never have I ever been caught in the act.",
+  "Never have I ever used a sex toy on a partner.",
+  "Never have I ever kissed someone of the same sex.",
+  "Never have I ever had sex in a public place."
+];
+
+function processNhieVote(vote, voterRole) {
+  if (gameState.status !== 'NHIE_PLAY') return;
+  
+  gameState.nhieAnswers[voterRole] = vote;
+  
+  const voterName = (voterRole === 'host') ? gameState.hostName : gameState.joinerName;
+  addLog(`🙈 ${voterName} has voted secretly...`, 'system');
+  
+  // Check if both voted
+  if (gameState.nhieAnswers.host !== '' && gameState.nhieAnswers.client !== '') {
+    gameState.status = 'NHIE_RESULT';
+    addLog(`✨ Both players voted! The truth is revealed!`, 'play');
+    sound.playSuccess();
+  } else {
+    sound.playTap();
+  }
+  
+  broadcastState();
+  renderUI();
+}
+
+function processNextNhieRound() {
+  gameState.status = 'NHIE_PLAY';
+  gameState.nhieCurrentPrompt = nhieStatements[Math.floor(Math.random() * nhieStatements.length)];
+  gameState.nhieAnswers = { host: '', client: '' };
+  gameState.round++;
+  
+  addLog(`--- NHIE Round ${gameState.round} Started ---`, 'system');
+  
+  broadcastState();
+  renderUI();
+  sound.playTap();
+}
+
+// ==========================================================================
+// EROTIC ROLEPLAY GENERATOR LOGIC
+// ==========================================================================
+const rpScenarios = [
+  {
+    title: "The Strict Boss & Naughty Secretary",
+    desc: "Late night at the office. Everyone else has gone home.",
+    roleA: "The Boss: Strict, demanding, and secretly incredibly horny.",
+    roleB: "The Secretary: Innocent-looking but purposely making mistakes to get punished.",
+    objA: "Command them to get on their knees and beg for forgiveness.",
+    objB: "Tease them until they lose their professional composure completely."
+  },
+  {
+    title: "Strangers at the Hotel Bar",
+    desc: "You are two strangers who lock eyes across a dimly lit bar.",
+    roleA: "The Confident Stranger: Smooth, direct, and knows exactly what they want.",
+    roleB: "The Shy Traveler: A bit nervous but desperately craving attention.",
+    objA: "Convince them to go to the bathroom with you right now.",
+    objB: "Make them buy you a drink by complimenting a specific body part."
+  },
+  {
+    title: "Caught Cheating on a Test",
+    desc: "A strict professor catches a student cheating on a final exam.",
+    roleA: "The Professor: Disappointed but willing to offer 'extra credit'.",
+    roleB: "The Student: Desperate to pass by any means necessary.",
+    objA: "Make them describe exactly what they'll do to pass.",
+    objB: "Offer to do something completely inappropriate to raise your grade."
+  }
+];
+
+function processRoleplayGenerate() {
+  if (gameState.status !== 'ROLEPLAY_PLAY') return;
+  
+  const scenario = rpScenarios[Math.floor(Math.random() * rpScenarios.length)];
+  
+  gameState.rpScenarioTitle = scenario.title;
+  gameState.rpScenarioDesc = scenario.desc;
+  
+  // Randomly assign A/B
+  if (Math.random() > 0.5) {
+    gameState.rpRoles.host = scenario.roleA;
+    gameState.rpObjectives.host = scenario.objA;
+    gameState.rpRoles.client = scenario.roleB;
+    gameState.rpObjectives.client = scenario.objB;
+  } else {
+    gameState.rpRoles.host = scenario.roleB;
+    gameState.rpObjectives.host = scenario.objB;
+    gameState.rpRoles.client = scenario.roleA;
+    gameState.rpObjectives.client = scenario.objA;
+  }
+  
+  gameState.round++;
+  addLog(`🎭 New Roleplay Scenario Generated!`, 'play');
+  
+  broadcastState();
+  renderUI();
+  sound.playSuccess();
+}
+
+// ==========================================================================
+// TEASE & COMMAND LOGIC
+// ==========================================================================
+const teaseCommandsList = [
+  "Touch yourself over your clothes for 60 seconds.",
+  "Remove your underwear and show me.",
+  "Massage your nipples/chest slowly for 2 minutes.",
+  "Edge yourself until I say stop.",
+  "Whisper what you want me to do to you.",
+  "Spank yourself lightly 5 times.",
+  "Show me your favorite toy and tell me how you use it.",
+  "Kiss the camera and tell me I own you."
+];
+
+function generateTeaseOptions() {
+  const shuffled = [...teaseCommandsList].sort(() => 0.5 - Math.random());
+  return shuffled.slice(0, 3);
+}
+
+function processTeaseNextRound() {
+  gameState.status = 'TEASE_PLAY';
+  // Swap commander
+  if (gameState.teaseCommander === '') {
+    gameState.teaseCommander = 'host';
+  } else {
+    gameState.teaseCommander = (gameState.teaseCommander === 'host') ? 'client' : 'host';
+  }
+  
+  gameState.teaseOptions = generateTeaseOptions();
+  gameState.teaseChosenCommand = '';
+  gameState.round++;
+  
+  const cmdName = gameState.teaseCommander === 'host' ? gameState.hostName : gameState.joinerName;
+  addLog(`👑 ${cmdName} is now the Commander!`, 'system');
+  
+  broadcastState();
+  renderUI();
+  sound.playTap();
+}
+
+function processTeaseChoice(cmdIndex) {
+  if (gameState.status !== 'TEASE_PLAY') return;
+  
+  gameState.teaseChosenCommand = gameState.teaseOptions[cmdIndex];
+  gameState.status = 'TEASE_RESULT';
+  
+  addLog(`👑 Commander has chosen! Submissive, obey!`, 'play');
+  
+  broadcastState();
+  renderUI();
+  sound.playSuccess();
+}
+
+// ==========================================================================
+// EDGE ROULETTE LOGIC
+// ==========================================================================
+const rouletteStates = ['SLOW TEASE', 'FAST STROKES', 'HANDS OFF', 'EDGE'];
+let rouletteInterval = null;
+
+function processRouletteStart() {
+  if (gameState.status !== 'ROULETTE_PLAY' || role !== 'host') return;
+  
+  gameState.rouletteStateText = 'SLOW TEASE';
+  gameState.rouletteTimer = 15; // 15 seconds for first state
+  addLog(`⏱️ Edge Roulette started! Follow the commands!`, 'play');
+  
+  broadcastState();
+  renderUI();
+  
+  clearInterval(rouletteInterval);
+  rouletteInterval = setInterval(() => {
+    gameState.rouletteTimer--;
+    
+    if (gameState.rouletteTimer <= 0) {
+      if (gameState.rouletteStateText === 'FINISH!') {
+        clearInterval(rouletteInterval);
+        gameState.rouletteStateText = 'DONE';
+        addLog(`✨ Roulette Complete!`, 'system');
+      } else {
+        // Pick next state randomly, increasing chance of FINISH as round increases
+        if (gameState.round > 5 && Math.random() > 0.7) {
+          gameState.rouletteStateText = 'FINISH!';
+          gameState.rouletteTimer = 30;
+          sound.playSuccess(); // Big sound for finish
+        } else {
+          gameState.rouletteStateText = rouletteStates[Math.floor(Math.random() * rouletteStates.length)];
+          gameState.rouletteTimer = Math.floor(Math.random() * 15) + 10; // 10-25 seconds
+          sound.playTap();
+        }
+        gameState.round++;
+      }
+    }
+    
+    broadcastState();
+    renderUI();
+  }, 1000);
+}
+
+function processRouletteExit() {
+  clearInterval(rouletteInterval);
+  processExitToSelector();
 }
 
 function startRaceTimer() {
@@ -2130,6 +2775,275 @@ function renderUI() {
           sound.playChime();
         }
       }
+    }
+  }
+
+  else if (gameState.status === 'DICE_PLAY') {
+    document.getElementById('stepDicePlay').classList.add('active');
+    
+    roundEl.textContent = `Round ${gameState.round}`;
+    
+    const isMyTurn = (isHost && gameState.activePlayer === 'host') || (!isHost && gameState.activePlayer === 'client');
+    turnIndicator.textContent = isMyTurn ? `Your Turn to Roll!` : `Waiting for ${partnerName}...`;
+    
+    const rollBtnArea = document.getElementById('diceRollBtnArea');
+    const waitingEl = document.getElementById('diceWaitingPartner');
+    const waitingText = document.getElementById('diceWaitingText');
+    
+    if (isMyTurn) {
+      rollBtnArea.classList.remove('hidden');
+      waitingEl.classList.add('hidden');
+    } else {
+      rollBtnArea.classList.add('hidden');
+      waitingEl.classList.remove('hidden');
+      waitingText.textContent = `Waiting for ${partnerName} to roll the dice...`;
+    }
+    
+    // Reset display
+    document.getElementById('diceAction').textContent = '?';
+    document.getElementById('diceBodyPart').textContent = '?';
+  }
+
+  else if (gameState.status === 'DICE_RESULT') {
+    document.getElementById('stepDiceResult').classList.add('active');
+    
+    roundEl.textContent = `Round ${gameState.round}`;
+    turnIndicator.textContent = `Spicy Challenge`;
+    
+    const isMyTurn = (isHost && gameState.activePlayer === 'host') || (!isHost && gameState.activePlayer === 'client');
+    const rollerName = gameState.activePlayer === 'host' ? gameState.hostName : gameState.joinerName;
+    
+    document.getElementById('diceResultAction').textContent = gameState.diceCurrentRoll.action;
+    document.getElementById('diceResultBodyPart').textContent = gameState.diceCurrentRoll.bodyPart;
+    
+    const evalArea = document.getElementById('diceEvaluateArea');
+    const waitingEl = document.getElementById('diceEvaluateWaiting');
+    const nextRoundArea = document.getElementById('diceNextRoundArea');
+    
+    if (gameState.diceWaitingApproval) {
+      nextRoundArea.classList.add('hidden');
+      if (isMyTurn) {
+        // I rolled, waiting for partner to approve
+        evalArea.classList.add('hidden');
+        waitingEl.classList.remove('hidden');
+      } else {
+        // Partner rolled, I must approve
+        evalArea.classList.remove('hidden');
+        waitingEl.classList.add('hidden');
+        document.getElementById('diceEvalQuestion').textContent = `Did ${rollerName} complete the challenge?`;
+      }
+    } else {
+      // Evaluation is done
+      evalArea.classList.add('hidden');
+      waitingEl.classList.add('hidden');
+      nextRoundArea.classList.remove('hidden');
+    }
+    
+    document.getElementById('diceHostName').textContent = gameState.hostName;
+    document.getElementById('diceHostScore').textContent = gameState.diceScores.host;
+    document.getElementById('diceJoinerName').textContent = gameState.joinerName;
+    document.getElementById('diceJoinerScore').textContent = gameState.diceScores.client;
+  }
+  
+  else if (gameState.status === 'TOD_PLAY') {
+    document.getElementById('stepTodPlay').classList.add('active');
+    roundEl.textContent = `Round ${gameState.round}`;
+    
+    const isMyTurn = (isHost && gameState.activePlayer === 'host') || (!isHost && gameState.activePlayer === 'client');
+    turnIndicator.textContent = isMyTurn ? `Your Turn to Choose!` : `Waiting for ${partnerName}...`;
+    
+    const btnArea = document.getElementById('todChoiceBtnArea');
+    const waitingEl = document.getElementById('todWaitingPartner');
+    
+    if (isMyTurn) {
+      btnArea.classList.remove('hidden');
+      waitingEl.classList.add('hidden');
+    } else {
+      btnArea.classList.add('hidden');
+      waitingEl.classList.remove('hidden');
+    }
+  }
+  
+  else if (gameState.status === 'TOD_RESULT') {
+    document.getElementById('stepTodResult').classList.add('active');
+    roundEl.textContent = `Round ${gameState.round}`;
+    turnIndicator.textContent = `Truth or Dare`;
+    
+    const isMyTurn = (isHost && gameState.activePlayer === 'host') || (!isHost && gameState.activePlayer === 'client');
+    const actingName = gameState.activePlayer === 'host' ? gameState.hostName : gameState.joinerName;
+    
+    document.getElementById('todResultType').textContent = gameState.todCurrentType.toUpperCase() + '!';
+    document.getElementById('todChallengeDisplay').textContent = gameState.todCurrentPrompt;
+    
+    const evalArea = document.getElementById('todEvaluateArea');
+    const waitingEl = document.getElementById('todEvaluateWaiting');
+    const nextRoundArea = document.getElementById('todNextRoundArea');
+    
+    if (gameState.todWaitingApproval) {
+      nextRoundArea.classList.add('hidden');
+      if (isMyTurn) {
+        evalArea.classList.add('hidden');
+        waitingEl.classList.remove('hidden');
+      } else {
+        evalArea.classList.remove('hidden');
+        waitingEl.classList.add('hidden');
+        document.getElementById('todEvalQuestion').textContent = `Did ${actingName} complete the ${gameState.todCurrentType}?`;
+      }
+    } else {
+      evalArea.classList.add('hidden');
+      waitingEl.classList.add('hidden');
+      nextRoundArea.classList.remove('hidden');
+    }
+    
+    document.getElementById('todHostName').textContent = gameState.hostName;
+    document.getElementById('todHostScore').textContent = gameState.todScores.host;
+    document.getElementById('todJoinerName').textContent = gameState.joinerName;
+    document.getElementById('todJoinerScore').textContent = gameState.todScores.client;
+  }
+  
+  else if (gameState.status === 'NHIE_PLAY') {
+    document.getElementById('stepNhiePlay').classList.add('active');
+    roundEl.textContent = `Round ${gameState.round}`;
+    turnIndicator.textContent = `Confessions`;
+    
+    document.getElementById('nhieStatementDisplay').textContent = gameState.nhieCurrentPrompt;
+    
+    const myVote = isHost ? gameState.nhieAnswers.host : gameState.nhieAnswers.client;
+    const btnArea = document.getElementById('nhieVoteBtnArea');
+    const waitingEl = document.getElementById('nhieWaitingPartner');
+    
+    if (myVote === '') {
+      btnArea.classList.remove('hidden');
+      waitingEl.classList.add('hidden');
+    } else {
+      btnArea.classList.add('hidden');
+      waitingEl.classList.remove('hidden');
+    }
+  }
+  
+  else if (gameState.status === 'NHIE_RESULT') {
+    document.getElementById('stepNhieResult').classList.add('active');
+    roundEl.textContent = `Round ${gameState.round}`;
+    turnIndicator.textContent = `The Truth is Out!`;
+    
+    document.getElementById('nhieResultStatement').textContent = gameState.nhieCurrentPrompt;
+    
+    document.getElementById('nhieRevealHostName').textContent = gameState.hostName;
+    const hAnswer = gameState.nhieAnswers.host === 'have' ? 'I Have 😈' : 'I Haven\'t 😇';
+    document.getElementById('nhieRevealHostAnswer').textContent = hAnswer;
+    
+    document.getElementById('nhieRevealClientName').textContent = gameState.joinerName;
+    const cAnswer = gameState.nhieAnswers.client === 'have' ? 'I Have 😈' : 'I Haven\'t 😇';
+    document.getElementById('nhieRevealClientAnswer').textContent = cAnswer;
+  }
+  
+  else if (gameState.status === 'ROLEPLAY_PLAY') {
+    document.getElementById('stepRoleplay').classList.add('active');
+    roundEl.textContent = `Scenario ${gameState.round}`;
+    turnIndicator.textContent = `Act it out!`;
+    
+    document.getElementById('rpScenarioTitle').textContent = gameState.rpScenarioTitle;
+    document.getElementById('rpScenarioDesc').textContent = gameState.rpScenarioDesc;
+    
+    document.getElementById('rpHostNameLabel').textContent = gameState.hostName;
+    document.getElementById('rpHostRole').textContent = gameState.rpRoles.host;
+    document.getElementById('rpHostObjective').textContent = gameState.rpObjectives.host;
+    
+    document.getElementById('rpClientNameLabel').textContent = gameState.joinerName;
+    document.getElementById('rpClientRole').textContent = gameState.rpRoles.client;
+    document.getElementById('rpClientObjective').textContent = gameState.rpObjectives.client;
+    
+    // Only host can generate new scenario
+    if (isHost) {
+      document.getElementById('rpControlsArea').classList.remove('hidden');
+    } else {
+      document.getElementById('rpControlsArea').classList.add('hidden');
+    }
+  }
+  
+  else if (gameState.status === 'TEASE_PLAY') {
+    document.getElementById('stepTeasePlay').classList.add('active');
+    roundEl.textContent = `Round ${gameState.round}`;
+    
+    const isCmd = (isHost && gameState.teaseCommander === 'host') || (!isHost && gameState.teaseCommander === 'client');
+    const cmdName = gameState.teaseCommander === 'host' ? gameState.hostName : gameState.joinerName;
+    
+    turnIndicator.textContent = isCmd ? `Your turn to Command!` : `Waiting for orders...`;
+    document.getElementById('teaseRoleTitle').textContent = isCmd ? `You are the Commander 👑` : `You are the Submissive ⛓️`;
+    document.getElementById('teaseRoleDesc').textContent = isCmd ? `Choose an action for your partner to perform on camera.` : `Wait for your commander's orders...`;
+    
+    const cmdArea = document.getElementById('teaseCommanderArea');
+    const subArea = document.getElementById('teaseSubmissiveArea');
+    
+    if (isCmd) {
+      cmdArea.classList.remove('hidden');
+      subArea.classList.add('hidden');
+      document.getElementById('teaseCmd1').textContent = gameState.teaseOptions[0];
+      document.getElementById('teaseCmd2').textContent = gameState.teaseOptions[1];
+      document.getElementById('teaseCmd3').textContent = gameState.teaseOptions[2];
+    } else {
+      cmdArea.classList.add('hidden');
+      subArea.classList.remove('hidden');
+    }
+  }
+  
+  else if (gameState.status === 'TEASE_RESULT') {
+    document.getElementById('stepTeaseResult').classList.add('active');
+    roundEl.textContent = `Round ${gameState.round}`;
+    turnIndicator.textContent = `Perform!`;
+    
+    const isCmd = (isHost && gameState.teaseCommander === 'host') || (!isHost && gameState.teaseCommander === 'client');
+    
+    document.getElementById('teaseActionTarget').textContent = isCmd ? `Watch closely as they perform:` : `You must perform this action on camera:`;
+    document.getElementById('teaseChosenCommand').textContent = gameState.teaseChosenCommand;
+    
+    if (isHost) {
+      document.getElementById('teaseNextRoundArea').classList.remove('hidden');
+    } else {
+      document.getElementById('teaseNextRoundArea').classList.add('hidden');
+    }
+  }
+  
+  else if (gameState.status === 'ROULETTE_PLAY') {
+    document.getElementById('stepRoulettePlay').classList.add('active');
+    roundEl.textContent = `Synchronized`;
+    turnIndicator.textContent = `Follow the pacing!`;
+    
+    document.getElementById('rouletteActionText').textContent = gameState.rouletteStateText;
+    
+    // Format timer
+    const m = Math.floor(gameState.rouletteTimer / 60);
+    const s = gameState.rouletteTimer % 60;
+    document.getElementById('rouletteTimerText').textContent = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    
+    const box = document.getElementById('rouletteDisplayBox');
+    box.style.borderColor = '#fff';
+    box.style.boxShadow = '0 0 20px rgba(255,255,255,0.2)';
+    
+    if (gameState.rouletteStateText === 'FINISH!') {
+      box.style.borderColor = '#ff3366';
+      box.style.boxShadow = '0 0 40px rgba(255,51,102,0.8)';
+      document.getElementById('rouletteActionText').style.color = '#ff3366';
+      triggerConfettiShower(); // small confetti blast
+    } else if (gameState.rouletteStateText === 'HANDS OFF') {
+      box.style.borderColor = '#ffcc00';
+      document.getElementById('rouletteActionText').style.color = '#ffcc00';
+    } else if (gameState.rouletteStateText === 'EDGE') {
+      box.style.borderColor = '#ff0000';
+      document.getElementById('rouletteActionText').style.color = '#ff0000';
+    } else {
+      document.getElementById('rouletteActionText').style.color = '#fff';
+    }
+    
+    if (isHost) {
+      document.getElementById('rouletteControlsArea').classList.remove('hidden');
+      if (gameState.rouletteStateText === 'WAIT' || gameState.rouletteStateText === 'DONE') {
+        document.getElementById('rouletteStartBtn').disabled = false;
+      } else {
+        document.getElementById('rouletteStartBtn').disabled = true;
+      }
+    } else {
+      document.getElementById('rouletteControlsArea').classList.add('hidden');
     }
   }
 }
