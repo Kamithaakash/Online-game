@@ -1441,12 +1441,47 @@ function handleRaceWordRejected(reason) {
   logEl.scrollTop = logEl.scrollHeight;
 }
 
+// Local dictionary word set loaded from sowpods dictionary file
+const localDictionary = new Set();
+let localDictionaryLoaded = false;
+
+// Load the local dictionary file on startup
+async function loadLocalDictionary() {
+  try {
+    const res = await fetch('dictionary.txt');
+    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+    const text = await res.text();
+    const words = text.split(/\r?\n/);
+    for (let word of words) {
+      const w = word.trim().toUpperCase();
+      if (w) {
+        localDictionary.add(w);
+      }
+    }
+    localDictionaryLoaded = true;
+    console.log(`Loaded ${localDictionary.size} words from local dictionary.`);
+  } catch (err) {
+    console.error("Failed to load local dictionary, will fallback to online API: ", err);
+  }
+}
+
+// Start loading the local dictionary immediately
+loadLocalDictionary();
+
 // Dictionary lookup cache to speed up subsequent checks
 const dictionaryCache = {};
 
-// Real-time Dictionary Validation (Online lookup)
+// Real-time Dictionary Validation
 async function checkWordInDictionary(word) {
-  const lowerWord = word.trim().toLowerCase();
+  const cleanWord = word.trim().toUpperCase();
+  const lowerWord = cleanWord.toLowerCase();
+  
+  // 1. Check local dictionary first if it is loaded (instant offline lookup!)
+  if (localDictionaryLoaded && localDictionary.size > 0) {
+    return localDictionary.has(cleanWord);
+  }
+
+  // 2. Fallback to online dictionary lookup (if local dictionary was not loaded or is empty)
   if (dictionaryCache[lowerWord] !== undefined) {
     return dictionaryCache[lowerWord];
   }
@@ -1462,10 +1497,9 @@ async function checkWordInDictionary(word) {
     const isValid = res.status === 200;
     dictionaryCache[lowerWord] = isValid;
     return isValid;
-  } catch (error) {
+  } catch (err) {
     clearTimeout(id);
-    console.error("Dictionary API fetch failed or timed out: ", error);
-    // Don't cache on network failure so it can be retried later if needed
+    console.error("Dictionary API fetch failed or timed out: ", err);
     return false; // Force fallback to partner review modal on error
   }
 }
