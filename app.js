@@ -127,6 +127,59 @@ class SoundFX {
     osc.start(now);
     osc.stop(now + 0.03);
   }
+
+  playChatSent() {
+    if (!this.enabled) return;
+    this.init();
+    const now = this.ctx.currentTime;
+    
+    // Quick soft high bubble pop
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(600, now);
+    osc.frequency.exponentialRampToValueAtTime(900, now + 0.08);
+    
+    gain.gain.setValueAtTime(0.04, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+    
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.08);
+  }
+
+  playChatReceived() {
+    if (!this.enabled) return;
+    this.init();
+    const now = this.ctx.currentTime;
+    
+    // Sweet dual chime (E5 -> A5)
+    const osc1 = this.ctx.createOscillator();
+    const osc2 = this.ctx.createOscillator();
+    const gain1 = this.ctx.createGain();
+    const gain2 = this.ctx.createGain();
+    
+    osc1.type = 'sine';
+    osc1.frequency.setValueAtTime(659.25, now); // E5
+    gain1.gain.setValueAtTime(0.05, now);
+    gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+    
+    osc2.type = 'sine';
+    osc2.frequency.setValueAtTime(880.00, now + 0.08); // A5
+    gain2.gain.setValueAtTime(0.05, now + 0.08);
+    gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.08 + 0.2);
+    
+    osc1.connect(gain1);
+    gain1.connect(this.ctx.destination);
+    osc2.connect(gain2);
+    gain2.connect(this.ctx.destination);
+    
+    osc1.start(now);
+    osc1.stop(now + 0.15);
+    osc2.start(now + 0.08);
+    osc2.stop(now + 0.08 + 0.2);
+  }
 }
 
 const sound = new SoundFX();
@@ -139,6 +192,11 @@ let peer = null;
 let conn = null;
 let raceTimerInterval = null;
 let lastTimeLeft = null;
+
+// Chat Widget State
+let isChatOpen = false;
+let chatUnreadCount = 0;
+let chatTypingTimeout = null;
 
 let gameState = {
   round: 1,
@@ -558,6 +616,9 @@ function setupNetworkConnection() {
         nickname: gameState.joinerName 
       });
     }
+
+    // Set chat to online state
+    updateChatStatus(true);
   });
 
   conn.on('data', (data) => {
@@ -585,6 +646,9 @@ function handleDisconnect() {
   addLog('Connection lost. Returning to Lobby.', 'system');
   alert('Partner disconnected. Returning to lobby setup.');
   clearRaceTimer();
+  
+  // Set chat to offline state
+  updateChatStatus(false);
   
   // Reset all
   if (peer) {
@@ -690,6 +754,14 @@ function handleIncomingMessage(data) {
       case 'TYPING':
         showOpponentTyping(data.isTyping);
         break;
+
+      case 'CHAT_MSG':
+        receiveChatMessage(data.text);
+        break;
+
+      case 'CHAT_TYPING':
+        handleChatTyping(data.isTyping);
+        break;
     }
   } else {
     // --- CLIENT HANDLERS ---
@@ -717,6 +789,14 @@ function handleIncomingMessage(data) {
       case 'REJECT':
         alert(`Rejected: ${data.reason}`);
         handleDisconnect();
+        break;
+
+      case 'CHAT_MSG':
+        receiveChatMessage(data.text);
+        break;
+
+      case 'CHAT_TYPING':
+        handleChatTyping(data.isTyping);
         break;
     }
   }
@@ -841,18 +921,14 @@ async function processRaceSubmission(word, submitter) {
     return;
   }
 
-  // Set loading status locally on host
-  if (submitter === 'host') {
-    document.getElementById('submitRaceWordBtn').disabled = true;
-    document.getElementById('submitRaceWordBtn').textContent = "VERIFYING...";
-  }
+  const submissionRound = gameState.round;
 
   // API dictionary validation
   const isValidEnglish = await checkWordInDictionary(cleanWord);
   
-  if (submitter === 'host') {
-    document.getElementById('submitRaceWordBtn').disabled = false;
-    document.getElementById('submitRaceWordBtn').textContent = "SUBMIT WORD 🚀";
+  // Discard validation result if round advanced or game state exited during network fetch
+  if (gameState.status !== 'RACE' || gameState.round !== submissionRound) {
+    return;
   }
 
   if (isValidEnglish) {
@@ -1315,6 +1391,7 @@ function submitEndingLetter() {
 
 function submitRaceWord() {
   const inputEl = document.getElementById('raceWordInput');
+  const submitBtn = document.getElementById('submitRaceWordBtn');
   const word = inputEl.value.trim().toUpperCase();
   
   if (!word || !word.startsWith(gameState.startLetter) || !word.endsWith(gameState.endLetter) || !/^[A-Z]+$/.test(word)) {
@@ -1324,6 +1401,13 @@ function submitRaceWord() {
     return;
   }
   
+  // Disable locally to prevent double submission
+  if (inputEl) inputEl.disabled = true;
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.textContent = "VERIFYING...";
+  }
+
   // Client/Host launches validation trigger
   sendTypingIndicator(false);
   triggerAction({ type: 'ACTION_SUBMIT_RACE_WORD', word: word });
@@ -1332,8 +1416,19 @@ function submitRaceWord() {
 function handleRaceWordRejected(reason) {
   sound.playBuzzer();
   const inputEl = document.getElementById('raceWordInput');
-  inputEl.classList.add('shake');
-  setTimeout(() => inputEl.classList.remove('shake'), 500);
+  const submitBtn = document.getElementById('submitRaceWordBtn');
+  
+  if (inputEl) {
+    inputEl.disabled = false;
+    inputEl.classList.add('shake');
+    setTimeout(() => inputEl.classList.remove('shake'), 500);
+    inputEl.focus();
+  }
+
+  if (submitBtn) {
+    submitBtn.disabled = false;
+    submitBtn.textContent = "SUBMIT WORD 🚀";
+  }
   
   // Show localized tip
   const logEl = document.getElementById('activityLog');
@@ -1346,13 +1441,31 @@ function handleRaceWordRejected(reason) {
   logEl.scrollTop = logEl.scrollHeight;
 }
 
+// Dictionary lookup cache to speed up subsequent checks
+const dictionaryCache = {};
+
 // Real-time Dictionary Validation (Online lookup)
 async function checkWordInDictionary(word) {
+  const lowerWord = word.trim().toLowerCase();
+  if (dictionaryCache[lowerWord] !== undefined) {
+    return dictionaryCache[lowerWord];
+  }
+
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), 800); // 800ms timeout for faster feedback
+
   try {
-    const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word.toLowerCase())}`);
-    return res.status === 200;
+    const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(lowerWord)}`, {
+      signal: controller.signal
+    });
+    clearTimeout(id);
+    const isValid = res.status === 200;
+    dictionaryCache[lowerWord] = isValid;
+    return isValid;
   } catch (error) {
-    console.error("Dictionary API fetch failed: ", error);
+    clearTimeout(id);
+    console.error("Dictionary API fetch failed or timed out: ", error);
+    // Don't cache on network failure so it can be retried later if needed
     return false; // Force fallback to partner review modal on error
   }
 }
@@ -1529,10 +1642,16 @@ function renderUI() {
       lastTimeLeft = gameState.timeLeft;
     }
     
-    // Clear typing input if just entered race state
+    // Clear and enable typing input if just entered race state
     const inputEl = document.getElementById('raceWordInput');
+    const submitBtn = document.getElementById('submitRaceWordBtn');
     if (inputEl.getAttribute('data-active-round') !== String(gameState.round)) {
       inputEl.value = '';
+      inputEl.disabled = false;
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "SUBMIT WORD 🚀";
+      }
       inputEl.setAttribute('data-active-round', String(gameState.round));
       setTimeout(() => inputEl.focus(), 100);
     }
@@ -1949,3 +2068,276 @@ function triggerConfettiShower() {
     });
   }
 }
+
+// ==========================================================================
+// CHAT WIDGET FUNCTIONALITY
+// ==========================================================================
+
+function initChatWidget() {
+  const chatToggleBtn = document.getElementById('chatToggleBtn');
+  const chatCloseBtn = document.getElementById('chatCloseBtn');
+  const chatSendBtn = document.getElementById('chatSendBtn');
+  const chatInput = document.getElementById('chatInput');
+
+  if (chatToggleBtn) {
+    chatToggleBtn.addEventListener('click', () => {
+      sound.playTap();
+      toggleChatPanel();
+    });
+  }
+
+  if (chatCloseBtn) {
+    chatCloseBtn.addEventListener('click', () => {
+      sound.playTap();
+      toggleChatPanel(false);
+    });
+  }
+
+  if (chatSendBtn) {
+    chatSendBtn.addEventListener('click', () => {
+      sendChatMessage();
+    });
+  }
+
+  if (chatInput) {
+    chatInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        sendChatMessage();
+      }
+    });
+
+    chatInput.addEventListener('input', () => {
+      sendChatTypingIndicator(true);
+      resetChatTypingTimeout();
+    });
+  }
+}
+
+function toggleChatPanel(forceState) {
+  const chatPanel = document.getElementById('chatPanel');
+  const chatBadge = document.getElementById('chatBadge');
+  const chatToggleBtn = document.getElementById('chatToggleBtn');
+  
+  if (forceState !== undefined) {
+    isChatOpen = forceState;
+  } else {
+    isChatOpen = !isChatOpen;
+  }
+
+  if (isChatOpen) {
+    chatPanel.classList.remove('hidden');
+    chatUnreadCount = 0;
+    if (chatBadge) {
+      chatBadge.classList.add('hidden');
+      chatBadge.textContent = '0';
+    }
+    if (chatToggleBtn) {
+      chatToggleBtn.classList.remove('chat-btn-pulse');
+    }
+    
+    // Scroll messages to bottom and focus
+    const chatMessages = document.getElementById('chatMessages');
+    if (chatMessages) {
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+    
+    const chatInput = document.getElementById('chatInput');
+    if (chatInput && !chatInput.disabled) {
+      setTimeout(() => chatInput.focus(), 100);
+    }
+  } else {
+    chatPanel.classList.add('hidden');
+  }
+}
+
+function sendChatMessage() {
+  const chatInput = document.getElementById('chatInput');
+  if (!chatInput) return;
+
+  const text = chatInput.value.trim();
+  if (!text) return;
+
+  // Clear input
+  chatInput.value = '';
+
+  // Append locally
+  appendChatMessage('me', text);
+
+  // Send to peer
+  sendNetworkMessage({
+    type: 'CHAT_MSG',
+    text: text
+  });
+
+  // Stop typing indicator
+  sendChatTypingIndicator(false);
+  if (chatTypingTimeout) {
+    clearTimeout(chatTypingTimeout);
+  }
+
+  // Play sound
+  sound.playChatSent();
+}
+
+function receiveChatMessage(text) {
+  appendChatMessage('partner', text);
+  
+  if (isChatOpen) {
+    sound.playChatReceived();
+  } else {
+    chatUnreadCount++;
+    const chatBadge = document.getElementById('chatBadge');
+    if (chatBadge) {
+      chatBadge.textContent = chatUnreadCount;
+      chatBadge.classList.remove('hidden');
+    }
+    
+    const chatToggleBtn = document.getElementById('chatToggleBtn');
+    if (chatToggleBtn) {
+      chatToggleBtn.classList.remove('chat-btn-pulse');
+      // trigger browser reflow to restart animation
+      void chatToggleBtn.offsetWidth;
+      chatToggleBtn.classList.add('chat-btn-pulse');
+    }
+    
+    sound.playChatReceived();
+  }
+}
+
+function sendChatTypingIndicator(isTyping) {
+  sendNetworkMessage({
+    type: 'CHAT_TYPING',
+    isTyping: isTyping
+  });
+}
+
+function resetChatTypingTimeout() {
+  if (chatTypingTimeout) {
+    clearTimeout(chatTypingTimeout);
+  }
+  chatTypingTimeout = setTimeout(() => {
+    sendChatTypingIndicator(false);
+  }, 2000);
+}
+
+function handleChatTyping(isTyping) {
+  const chatMessages = document.getElementById('chatMessages');
+  if (!chatMessages) return;
+
+  // Remove existing typing indicator
+  const existingIndicator = chatMessages.querySelector('.chat-typing-indicator');
+  if (existingIndicator) {
+    existingIndicator.remove();
+  }
+
+  if (isTyping) {
+    // Hide placeholder
+    const placeholder = document.getElementById('chatPlaceholder');
+    if (placeholder) {
+      placeholder.style.display = 'none';
+    }
+
+    const typingIndicator = document.createElement('div');
+    typingIndicator.className = 'chat-typing-indicator';
+    typingIndicator.innerHTML = `
+      <div class="chat-typing-dot"></div>
+      <div class="chat-typing-dot"></div>
+      <div class="chat-typing-dot"></div>
+    `;
+    
+    chatMessages.appendChild(typingIndicator);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  }
+}
+
+function appendChatMessage(sender, text, isSystem = false) {
+  const chatMessages = document.getElementById('chatMessages');
+  if (!chatMessages) return;
+
+  // Hide placeholder
+  const placeholder = document.getElementById('chatPlaceholder');
+  if (placeholder) {
+    placeholder.style.display = 'none';
+  }
+
+  // Remove typing indicator if it exists, to insert message before it or just re-add it
+  const typingIndicator = chatMessages.querySelector('.chat-typing-indicator');
+  if (typingIndicator) {
+    typingIndicator.remove();
+  }
+
+  const messageEl = document.createElement('div');
+  
+  if (isSystem) {
+    messageEl.className = 'chat-system-msg';
+    messageEl.textContent = text;
+  } else {
+    messageEl.className = `chat-bubble ${sender === 'me' ? 'sent' : 'received'}`;
+    
+    const textSpan = document.createElement('span');
+    textSpan.textContent = text;
+    messageEl.appendChild(textSpan);
+    
+    const timeSpan = document.createElement('span');
+    timeSpan.className = 'chat-time';
+    const now = new Date();
+    timeSpan.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    messageEl.appendChild(timeSpan);
+  }
+
+  chatMessages.appendChild(messageEl);
+
+  // Restore typing indicator if opponent is typing
+  if (typingIndicator && sender === 'me') {
+    chatMessages.appendChild(typingIndicator);
+  }
+
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+function updateChatStatus(isOnline) {
+  const statusDot = document.getElementById('chatStatusDot');
+  const chatInput = document.getElementById('chatInput');
+  const chatSendBtn = document.getElementById('chatSendBtn');
+  const placeholderText = document.getElementById('chatPlaceholderText');
+  const placeholder = document.getElementById('chatPlaceholder');
+  const chatMessages = document.getElementById('chatMessages');
+
+  if (!statusDot || !chatInput || !chatSendBtn) return;
+
+  if (isOnline) {
+    statusDot.className = 'chat-status-dot online';
+    chatInput.disabled = false;
+    chatSendBtn.disabled = false;
+    
+    const partnerName = (role === 'host') ? gameState.joinerName : gameState.hostName;
+    if (placeholderText) {
+      placeholderText.textContent = `Linked with ${partnerName}! Send a sweet message. 💖`;
+    }
+    
+    // Add system connected message
+    appendChatMessage('system', `Connected with ${partnerName}!`, true);
+  } else {
+    statusDot.className = 'chat-status-dot offline';
+    chatInput.disabled = true;
+    chatInput.value = '';
+    chatSendBtn.disabled = true;
+    
+    if (placeholderText) {
+      placeholderText.textContent = 'Link up with your partner using a Room Code to start chatting! 💬';
+    }
+    if (placeholder) {
+      placeholder.style.display = 'flex';
+    }
+    
+    // Remove all previous messages or append a system offline message
+    if (chatMessages) {
+      // Keep placeholder, clear rest
+      const placeholderHtml = placeholder ? placeholder.outerHTML : '';
+      chatMessages.innerHTML = placeholderHtml;
+    }
+  }
+}
+
+// Auto-initialize chat widget on script load
+initChatWidget();
