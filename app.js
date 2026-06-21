@@ -1626,7 +1626,7 @@ function switchScreen(screenId) {
 
 // Log view details
 function addLog(text, type = 'system') {
-  appendChatMessage('system', text, true, type);
+  // Feed removed as per user request
 }
 
 function showError(msg, side = 'join') {
