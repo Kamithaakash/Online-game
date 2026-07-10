@@ -279,7 +279,7 @@ function appendChatMessage(sender, text, isSystem = false) {
     messageEl.className = 'chat-system-msg';
     messageEl.textContent = text;
   } else {
-    messageEl.className = \`chat-bubble \${sender === 'me' ? 'sent' : 'received'}\`;
+    messageEl.className = `chat-bubble ${sender === 'me' ? 'sent' : 'received'}`;
     
     const textSpan = document.createElement('span');
     textSpan.textContent = text;
@@ -324,11 +324,11 @@ function updateChatStatus(isOnline) {
     
     const partnerName = (role === 'host') ? gameState.joinerName : gameState.hostName;
     if (placeholderText) {
-      placeholderText.textContent = \`Linked with \${partnerName}! Send a sweet message. 💖\`;
+      placeholderText.textContent = `Linked with ${partnerName}! Send a sweet message. 💖`;
     }
     
     // Add system connected message
-    appendChatMessage('system', \`Connected with \${partnerName}!\`, true);
+    appendChatMessage('system', `Connected with ${partnerName}!`, true);
   } else {
     statusDot.className = 'chat-status-dot offline';
     chatInput.disabled = true;
@@ -356,5 +356,5 @@ function updateChatStatus(isOnline) {
   }
 }
 
-// Auto-initialize chat sidebar on script load
-initChatWidget();
+// NOTE: initChatWidget() is already called in app.js — do NOT call it again here
+// to avoid double-attaching event listeners that break the toggle button.
