@@ -3,102 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <!-- =====================================================
-       PRIMARY SEO META TAGS
-       ===================================================== -->
-  <title>HeartPlay – Free Real-Time Online Couples Games | Play Together Remotely</title>
-  <meta name="description" content="HeartPlay is a free real-time couples game hub for long-distance partners. Play Letter Link, SOS, Sync Quiz, Rock Paper Scissors, Truth or Dare, Love Dice & more — all over a private P2P connection. No app download needed.">
-  <meta name="keywords" content="couples game online, long distance relationship games, couple games to play together, real-time couples game, love games for two, online games for couples, letter link game, sync quiz couples, truth or dare couples, long distance games">
-  <meta name="author" content="HeartPlay">
-  <meta name="robots" content="index, follow">
-  <meta name="theme-color" content="#ff4d87">
-
-  <!-- Canonical URL -->
-  <link rel="canonical" href="https://couple-game-nu.vercel.app/">
-
-  <!-- Favicon -->
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💖</text></svg>">
-
-  <!-- =====================================================
-       OPEN GRAPH — Facebook, WhatsApp, Discord, Telegram
-       ===================================================== -->
-  <meta property="og:type" content="website">
-  <meta property="og:url" content="https://couple-game-nu.vercel.app/">
-  <meta property="og:title" content="HeartPlay – Free Real-Time Online Couples Games">
-  <meta property="og:description" content="Play fun games with your partner from anywhere! Letter Link, Sync Quiz, SOS, Love Dice, Truth or Dare & more. Create a private room and share the code — no app needed.">
-  <meta property="og:image" content="https://couple-game-nu.vercel.app/og-image.png">
-  <meta property="og:image:width" content="1200">
-  <meta property="og:image:height" content="630">
-  <meta property="og:image:alt" content="HeartPlay – Real-Time Couples Game Hub with floating hearts">
-  <meta property="og:site_name" content="HeartPlay">
-  <meta property="og:locale" content="en_US">
-
-  <!-- =====================================================
-       TWITTER / X CARD
-       ===================================================== -->
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:url" content="https://couple-game-nu.vercel.app/">
-  <meta name="twitter:title" content="HeartPlay – Free Real-Time Online Couples Games">
-  <meta name="twitter:description" content="Play fun games with your partner from anywhere! Create a private room, share the code & play together in real time. No sign-up needed.">
-  <meta name="twitter:image" content="https://couple-game-nu.vercel.app/og-image.png">
-  <meta name="twitter:image:alt" content="HeartPlay couples game hub">
-
-  <!-- =====================================================
-       JSON-LD STRUCTURED DATA (Google Rich Results)
-       ===================================================== -->
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "WebApplication",
-    "name": "HeartPlay",
-    "alternateName": "HeartPlay Couples Game Hub",
-    "url": "https://couple-game-nu.vercel.app/",
-    "description": "A free real-time online game hub for couples. Features Letter Link, SOS Classic, Sync Quiz, Rock Paper Scissors, Truth or Dare, Love Dice, Never Have I Ever, and more. Play together privately over a peer-to-peer connection — no account or download required.",
-    "applicationCategory": "GameApplication",
-    "operatingSystem": "Any",
-    "browserRequirements": "Requires a modern web browser with WebRTC support",
-    "offers": {
-      "@type": "Offer",
-      "price": "0",
-      "priceCurrency": "USD"
-    },
-    "featureList": [
-      "Letter Link word race game",
-      "SOS Classic board game",
-      "Sync Quiz for couples",
-      "Rock Paper Scissors",
-      "Truth or Dare",
-      "Love Dice game",
-      "Never Have I Ever",
-      "Real-time P2P connection",
-      "Live chat with partner",
-      "Emoji reactions and stickers",
-      "No sign-up required"
-    ],
-    "screenshot": "https://couple-game-nu.vercel.app/og-image.png",
-    "creator": {
-      "@type": "Organization",
-      "name": "HeartPlay"
-    },
-    "keywords": "couples game, online game for couples, long distance relationship, real-time game, love game"
-  }
-  </script>
-
-  <!-- =====================================================
-       PERFORMANCE — PRELOAD KEY ASSETS
-       ===================================================== -->
+  <title>HeartPlay - Real-Time Couples Game Hub</title>
+  <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="preconnect" href="https://unpkg.com">
-  <link rel="dns-prefetch" href="https://0.peerjs.com">
-
-  <!-- Google Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-
   <!-- Stylesheet -->
   <link rel="stylesheet" href="style.css">
-
   <!-- PeerJS P2P Networking -->
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
   <!-- Canvas Confetti for celebrations -->
@@ -113,9 +24,8 @@
     <!-- Theme Toggle & Settings Bar -->
     <header class="app-bar">
       <div class="logo">
-        <span class="heart-icon" aria-hidden="true">💖</span>
-        <!-- h1 is keyword-rich for SEO; visual size is controlled via CSS -->
-        <h1>HeartPlay<span class="seo-subtitle"> – Online Couples Games</span></h1>
+        <span class="heart-icon">💖</span>
+        <h1>HeartPlay</h1>
       </div>
       <div class="app-actions">
         <button id="howToPlayBtn" class="icon-btn" title="How to Play">
@@ -129,10 +39,10 @@
     </header>
 
     <!-- SECTION 1: LOBBY & SETUP -->
-    <section id="lobbyScreen" class="screen active" aria-label="Game Lobby">
+    <section id="lobbyScreen" class="screen active">
       <div class="hero-section">
-        <h2 class="fredoka">Free Online Couples Games – Play Together in Real Time</h2>
-        <p>HeartPlay is a private, real-time game hub built for couples — perfect for long-distance relationships. Choose from 10 fun games including Letter Link, Sync Quiz, SOS Classic, Rock Paper Scissors, Truth or Dare &amp; more. Create a room, share the code, and start playing instantly. No sign-up required.</p>
+        <h2 class="fredoka">Connect & Play Together</h2>
+        <p>A sweet, real-time gaming space designed for couples, even when miles apart. Play "Letter Link" and test your sync!</p>
       </div>
 
       <div class="glass-card nickname-card">
@@ -385,41 +295,6 @@
                   <p>Roll the dice to generate a sensual combination of action and body part. Turn up the heat! 🌶️</p>
                   <button class="btn btn-danger btn-select-game" data-game="DICE">Play Love Dice</button>
                 </div>
-                <!-- Game 6: Intimate Truth or Dare -->
-                <div class="game-select-card" id="selectTodCard">
-                  <div class="game-card-icon">🔥</div>
-                  <h4 class="text-danger">Intimate Truth or Dare (18+)</h4>
-                  <p>Answer explicit, intimate questions or perform hot dares! Perfect for exploring boundaries.</p>
-                  <button class="btn btn-danger btn-select-game" data-game="TOD">Play Truth or Dare</button>
-                </div>
-                <!-- Game 7: Never Have I Ever -->
-                <div class="game-select-card" id="selectNhieCard">
-                  <div class="game-card-icon">🙈</div>
-                  <h4 class="text-danger">Never Have I Ever (18+)</h4>
-                  <p>Secretly vote if you've done naughty deeds. A great way to discover hidden desires!</p>
-                  <button class="btn btn-danger btn-select-game" data-game="NHIE">Play NHIE</button>
-                </div>
-                <!-- Game 8: Erotic Roleplay Generator -->
-                <div class="game-select-card" id="selectRoleplayCard">
-                  <div class="game-card-icon">🎭</div>
-                  <h4 class="text-danger">Erotic Roleplay (18+)</h4>
-                  <p>Get an explicit scenario, a character, and a Secret Objective to act out over video call.</p>
-                  <button class="btn btn-danger btn-select-game" data-game="ROLEPLAY">Play Roleplay</button>
-                </div>
-                <!-- Game 9: Remote Tease & Command -->
-                <div class="game-select-card" id="selectTeaseCard">
-                  <div class="game-card-icon">👑</div>
-                  <h4 class="text-danger">Tease & Command (18+)</h4>
-                  <p>A Master/Sub game where one partner commands the other to perform hot actions on camera.</p>
-                  <button class="btn btn-danger btn-select-game" data-game="TEASE">Play Tease</button>
-                </div>
-                <!-- Game 10: Edge Roulette -->
-                <div class="game-select-card" id="selectRouletteCard">
-                  <div class="game-card-icon">⏱️</div>
-                  <h4 class="text-danger">Edge Roulette (18+)</h4>
-                  <p>Synchronized mutual touching. Follow the on-screen pacing together until it's time to climax!</p>
-                  <button class="btn btn-danger btn-select-game" data-game="ROULETTE">Play Edge Roulette</button>
-                </div>
               </div>
               <div class="waiting-animation hidden" id="gameSelectorWaiting">
                 <div class="love-loader">💝</div>
@@ -664,224 +539,6 @@
               <div class="next-round-controls hidden" id="diceNextRoundArea" style="margin-top: 1.5rem;">
                 <button id="nextDiceRoundBtn" class="btn btn-primary">Next Player's Turn</button>
                 <button id="exitDiceBtn" class="btn btn-secondary">Back to Lobby</button>
-              </div>
-            </div>
-
-            <!-- DYNAMIC SCREEN: Truth or Dare -->
-            <div id="stepTodPlay" class="game-step-view">
-              <div class="instruction-block">
-                <span class="step-num">Truth or Dare 🔥</span>
-                <h3>Choose your fate!</h3>
-                <p id="todPlayDesc">Pick Truth for a revealing question or Dare for a sensual action.</p>
-              </div>
-              
-              <div class="input-action-wrapper" id="todChoiceBtnArea" style="justify-content: center; gap: 1rem;">
-                <button id="todTruthBtn" class="btn btn-primary btn-large animation-pulse">Truth 🗣️</button>
-                <button id="todDareBtn" class="btn btn-danger btn-large animation-pulse">Dare 😈</button>
-              </div>
-
-              <div class="waiting-animation hidden" id="todWaitingPartner">
-                <div class="love-loader">🔥</div>
-                <p id="todWaitingText">Waiting for partner to choose...</p>
-              </div>
-            </div>
-
-            <!-- DYNAMIC SCREEN: Truth or Dare Result -->
-            <div id="stepTodResult" class="game-step-view">
-              <div class="instruction-block">
-                <h3 class="text-danger" id="todResultType">Truth!</h3>
-                <p>Answer truthfully or perform the dare.</p>
-              </div>
-              
-              <div class="challenge-result-box" id="todChallengeDisplay" style="font-size: 1.2rem; padding: 1.5rem;">
-                What is your biggest fantasy?
-              </div>
-              
-              <!-- Evaluation controls for the partner -->
-              <div class="quiz-evaluate-controls" id="todEvaluateArea">
-                <p class="evaluation-title" id="todEvalQuestion">Did they do it?</p>
-                <div class="flex-center-gap">
-                  <button id="todApproveBtn" class="btn btn-primary btn-success">Yes, Approved! ❤️</button>
-                  <button id="todRejectBtn" class="btn btn-secondary btn-danger">No, Skipped ❌</button>
-                </div>
-              </div>
-
-              <div class="waiting-animation hidden" id="todEvaluateWaiting">
-                <div class="love-loader">⏳</div>
-                <p>Waiting for partner's approval...</p>
-              </div>
-
-              <div class="result-score-highlight">
-                <div class="mini-score">
-                  <span id="todHostName">Player A</span>: <span id="todHostScore">0</span>
-                </div>
-                <div class="mini-vs">/</div>
-                <div class="mini-score">
-                  <span id="todJoinerName">Player B</span>: <span id="todJoinerScore">0</span>
-                </div>
-              </div>
-
-              <div class="next-round-controls hidden" id="todNextRoundArea" style="margin-top: 1.5rem;">
-                <button id="nextTodRoundBtn" class="btn btn-primary">Next Player's Turn</button>
-                <button id="exitTodBtn" class="btn btn-secondary">Back to Lobby</button>
-              </div>
-            </div>
-
-            <!-- DYNAMIC SCREEN: Never Have I Ever -->
-            <div id="stepNhiePlay" class="game-step-view">
-              <div class="instruction-block">
-                <span class="step-num">Never Have I Ever 🙈</span>
-                <h3>Secret Confessions</h3>
-                <p id="nhiePlayDesc">Read the statement and vote secretly.</p>
-              </div>
-              
-              <div class="challenge-result-box" id="nhieStatementDisplay" style="font-size: 1.2rem; padding: 1.5rem;">
-                Never have I ever...
-              </div>
-              
-              <div class="input-action-wrapper" id="nhieVoteBtnArea" style="justify-content: center; gap: 1rem; margin-top: 1.5rem;">
-                <button id="nhieHaveBtn" class="btn btn-danger btn-large">I Have 😈</button>
-                <button id="nhieHaveNotBtn" class="btn btn-primary btn-large">I Haven't 😇</button>
-              </div>
-
-              <div class="waiting-animation hidden" id="nhieWaitingPartner">
-                <div class="love-loader">🙈</div>
-                <p id="nhieWaitingText">Waiting for partner to vote...</p>
-              </div>
-            </div>
-
-            <!-- DYNAMIC SCREEN: Never Have I Ever Result -->
-            <div id="stepNhieResult" class="game-step-view">
-              <div class="instruction-block">
-                <h3 class="text-danger">The Reveal!</h3>
-                <p>Here's what you both said about:</p>
-              </div>
-              
-              <div class="challenge-result-box" id="nhieResultStatement" style="font-size: 1.1rem; padding: 1rem; margin-bottom: 1.5rem; opacity: 0.8;">
-                Never have I ever...
-              </div>
-              
-              <div class="nhie-reveal-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; text-align: center;">
-                <div class="glass-card" style="padding: 1rem;">
-                  <h4 id="nhieRevealHostName">Host</h4>
-                  <div id="nhieRevealHostAnswer" style="font-size: 1.5rem; font-weight: bold; margin-top: 0.5rem;">I Have 😈</div>
-                </div>
-                <div class="glass-card" style="padding: 1rem;">
-                  <h4 id="nhieRevealClientName">Joiner</h4>
-                  <div id="nhieRevealClientAnswer" style="font-size: 1.5rem; font-weight: bold; margin-top: 0.5rem;">I Haven't 😇</div>
-                </div>
-              </div>
-
-              <div class="next-round-controls hidden" id="nhieNextRoundArea" style="margin-top: 2rem;">
-                <button id="nextNhieRoundBtn" class="btn btn-primary">Next Statement</button>
-                <button id="exitNhieBtn" class="btn btn-secondary">Back to Lobby</button>
-              </div>
-            </div>
-
-            <!-- DYNAMIC SCREEN: Erotic Roleplay -->
-            <div id="stepRoleplay" class="game-step-view">
-              <div class="instruction-block">
-                <span class="step-num">Erotic Roleplay 🎭</span>
-                <h3 class="text-danger" id="rpScenarioTitle">The Setup</h3>
-                <p id="rpScenarioDesc">Read your roles and secret objectives carefully before you begin acting on camera.</p>
-              </div>
-              
-              <div class="nhie-reveal-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
-                <!-- Host Role Card -->
-                <div class="glass-card" style="padding: 1rem; position: relative;">
-                  <h4 id="rpHostNameLabel">Host</h4>
-                  <div class="highlight-text text-danger" id="rpHostRole" style="font-size: 1.2rem; margin: 0.5rem 0;">Role</div>
-                  <div class="secret-objective-box">
-                    <p class="secret-label">Secret Objective:</p>
-                    <p id="rpHostObjective" class="secret-text blur-text">Hover to reveal...</p>
-                  </div>
-                </div>
-                <!-- Joiner Role Card -->
-                <div class="glass-card" style="padding: 1rem; position: relative;">
-                  <h4 id="rpClientNameLabel">Joiner</h4>
-                  <div class="highlight-text text-danger" id="rpClientRole" style="font-size: 1.2rem; margin: 0.5rem 0;">Role</div>
-                  <div class="secret-objective-box">
-                    <p class="secret-label">Secret Objective:</p>
-                    <p id="rpClientObjective" class="secret-text blur-text">Hover to reveal...</p>
-                  </div>
-                </div>
-              </div>
-
-              <div class="next-round-controls" id="rpControlsArea" style="margin-top: 2rem;">
-                <button id="nextRoleplayBtn" class="btn btn-primary">Generate New Scenario</button>
-                <button id="exitRoleplayBtn" class="btn btn-secondary">Back to Lobby</button>
-              </div>
-            </div>
-
-            <!-- DYNAMIC SCREEN: Tease & Command -->
-            <div id="stepTeasePlay" class="game-step-view">
-              <div class="instruction-block">
-                <span class="step-num">Tease & Command 👑</span>
-                <h3 class="text-danger" id="teaseRoleTitle">You are the Commander!</h3>
-                <p id="teaseRoleDesc">Choose a command for your submissive to perform on camera.</p>
-              </div>
-              
-              <!-- Commander View -->
-              <div id="teaseCommanderArea" class="hidden" style="display: flex; flex-direction: column; gap: 1rem;">
-                <button class="btn btn-primary btn-large btn-tease-cmd" id="teaseCmd1">Command 1</button>
-                <button class="btn btn-primary btn-large btn-tease-cmd" id="teaseCmd2">Command 2</button>
-                <button class="btn btn-primary btn-large btn-tease-cmd" id="teaseCmd3">Command 3</button>
-              </div>
-
-              <!-- Submissive View -->
-              <div id="teaseSubmissiveArea" class="hidden" style="text-align: center;">
-                <div class="love-loader">👑</div>
-                <p style="margin-top: 1rem;">Waiting for your Commander's orders...</p>
-              </div>
-            </div>
-
-            <!-- DYNAMIC SCREEN: Tease & Command Result -->
-            <div id="stepTeaseResult" class="game-step-view">
-              <div class="instruction-block">
-                <h3 class="text-danger">The Command 👑</h3>
-                <p id="teaseActionTarget">The Submissive must perform this action:</p>
-              </div>
-              
-              <div class="challenge-result-box" id="teaseChosenCommand" style="font-size: 1.2rem; padding: 1.5rem; border-color: #ff3366; box-shadow: 0 0 15px rgba(255,51,102,0.4);">
-                Action...
-              </div>
-
-              <div class="next-round-controls" id="teaseNextRoundArea" style="margin-top: 2rem;">
-                <button id="nextTeaseRoundBtn" class="btn btn-primary">Next Round (Swap Roles)</button>
-                <button id="exitTeaseBtn" class="btn btn-secondary">Back to Lobby</button>
-              </div>
-            </div>
-
-            <!-- DYNAMIC SCREEN: Edge Roulette -->
-            <div id="stepRoulettePlay" class="game-step-view">
-              <div class="instruction-block">
-                <span class="step-num">Edge Roulette ⏱️</span>
-                <h3>Sync your rhythm!</h3>
-                <p>Follow the commands on screen together.</p>
-              </div>
-              
-              <div class="roulette-display-area" id="rouletteDisplayBox" style="
-                margin: 2rem auto;
-                width: 250px;
-                height: 250px;
-                border-radius: 50%;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-                border: 4px solid #fff;
-                background: rgba(0,0,0,0.5);
-                transition: all 0.5s ease;
-                box-shadow: 0 0 20px rgba(255,255,255,0.2);
-              ">
-                <div id="rouletteActionText" style="font-size: 2rem; font-weight: bold; text-shadow: 2px 2px 4px rgba(0,0,0,0.5);">WAIT</div>
-                <div id="rouletteTimerText" style="font-size: 3rem; font-family: monospace; font-weight: bold; margin-top: 0.5rem;">00:00</div>
-              </div>
-
-              <!-- Only Host Controls Roulette -->
-              <div class="input-action-wrapper" id="rouletteControlsArea" style="justify-content: center; gap: 1rem;">
-                <button id="rouletteStartBtn" class="btn btn-danger btn-large animation-pulse">Start Roulette</button>
-                <button id="exitRouletteBtn" class="btn btn-secondary">Exit Game</button>
               </div>
             </div>
 
