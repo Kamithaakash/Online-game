@@ -761,207 +761,423 @@ document.querySelectorAll('.react-btn').forEach(btn => {
 
 
 // ==========================================================================
-// NETWORK LAYER - PEERJS HOST/JOIN
+// NETWORK LAYER — Firebase Signaling + WebRTC Data Channel
+// Works reliably across all home networks and locations.
 // ==========================================================================
-// Shared PeerJS config with STUN servers for cross-network NAT traversal
-const PEER_CONFIG = {
-  config: {
-    iceServers: [
-      { urls: 'stun:stun.l.google.com:19302' },
-      { urls: 'stun:stun1.l.google.com:19302' },
-      { urls: 'stun:stun2.l.google.com:19302' },
-      { urls: 'stun:stun3.l.google.com:19302' },
-      { urls: 'stun:stun4.l.google.com:19302' },
-      { urls: 'stun:stun.cloudflare.com:3478' },
-      // Free public TURN relay — needed when both peers are behind strict NAT
-      {
-        urls: 'turn:openrelay.metered.ca:80',
-        username: 'openrelayproject',
-        credential: 'openrelayproject'
-      },
-      {
-        urls: 'turn:openrelay.metered.ca:443',
-        username: 'openrelayproject',
-        credential: 'openrelayproject'
-      },
-      {
-        urls: 'turn:openrelay.metered.ca:443?transport=tcp',
-        username: 'openrelayproject',
-        credential: 'openrelayproject'
-      }
-    ]
-  }
+
+// --- Firebase Configuration (HeartPlay signaling project) ---
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyAdFvVEAPuUXY9UXTbeWetVDmE8uk2SCd0",
+  authDomain: "heartplay-signaling.firebaseapp.com",
+  databaseURL: "https://heartplay-signaling-default-rtdb.firebaseio.com",
+  projectId: "heartplay-signaling",
+  storageBucket: "heartplay-signaling.firebasestorage.app",
+  messagingSenderId: "504455810734",
+  appId: "1:504455810734:web:ebe0ce13a04d2cda0ca73f"
 };
 
+// ICE servers: multiple STUN + free TURN relays for maximum compatibility
+const ICE_SERVERS = [
+  { urls: 'stun:stun.l.google.com:19302' },
+  { urls: 'stun:stun1.l.google.com:19302' },
+  { urls: 'stun:stun2.l.google.com:19302' },
+  { urls: 'stun:stun3.l.google.com:19302' },
+  { urls: 'stun:stun4.l.google.com:19302' },
+  { urls: 'stun:stun.cloudflare.com:3478' },
+  { urls: 'stun:stun.stunprotocol.org:3478' },
+  {
+    urls: 'turn:openrelay.metered.ca:80',
+    username: 'openrelayproject',
+    credential: 'openrelayproject'
+  },
+  {
+    urls: 'turn:openrelay.metered.ca:443',
+    username: 'openrelayproject',
+    credential: 'openrelayproject'
+  },
+  {
+    urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+    username: 'openrelayproject',
+    credential: 'openrelayproject'
+  }
+];
+
+// WebRTC peer connection (replaces PeerJS)
+let rtcPeer = null;
+let dataChannel = null;
+let firebaseApp = null;
+let firebaseDb = null;
+let roomRef = null;
+let joinTimeoutHandle = null;
+let heartbeatInterval = null;
+
+// Shim the old PeerJS globals so nothing else in the file breaks
+let peer = null;
+let conn = null;
+
+function getFirebaseDb() {
+  if (firebaseDb) return firebaseDb;
+  try {
+    // Try to reuse existing app
+    firebaseApp = firebase.app();
+  } catch (e) {
+    firebaseApp = firebase.initializeApp(FIREBASE_CONFIG);
+  }
+  firebaseDb = firebase.database();
+  return firebaseDb;
+}
+
+// ---- HOST FLOW ----
 function hostRoom(nickname) {
-  // Generate random 4-digit room code
   const code = Math.floor(1000 + Math.random() * 9000).toString();
-  const peerId = `heartplay-love-${code}`;
-  
   gameState.hostName = nickname;
   gameState.status = 'LOBBY';
-  
-  peer = new Peer(peerId, PEER_CONFIG);
 
-  peer.on('open', (id) => {
-    console.log('Room opened on PeerServer. Peer ID:', id);
+  const db = getFirebaseDb();
+  roomRef = db.ref(`rooms/${code}`);
+
+  // Clean up any stale room first, then create fresh
+  roomRef.remove().then(() => {
+    const expiresAt = Date.now() + 30 * 60 * 1000; // 30 min TTL
+    return roomRef.set({ host: { nickname }, expiresAt, status: 'waiting' });
+  }).then(() => {
     document.getElementById('roomCodeDisplay').textContent = `HEART-${code}`;
     document.getElementById('roomDetailsPanel').classList.remove('hidden');
     document.getElementById('nicknameInput').disabled = true;
     document.getElementById('createRoomBtn').disabled = true;
-    
     addLog(`Created room HEART-${code}. Send link to your partner!`, 'system');
-  });
 
-  peer.on('connection', (connection) => {
-    if (conn) {
-      // Room is busy
-      connection.on('open', () => {
-        connection.send({ type: 'REJECT', reason: 'Room is occupied!' });
-        connection.close();
+    // Create RTCPeerConnection and data channel (host creates the offer)
+    rtcPeer = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+    dataChannel = rtcPeer.createDataChannel('game', { ordered: true });
+    setupDataChannel(dataChannel);
+
+    // Collect ICE candidates and push to Firebase
+    rtcPeer.onicecandidate = (e) => {
+      if (e.candidate) {
+        roomRef.child('hostCandidates').push(e.candidate.toJSON());
+      }
+    };
+
+    // Create offer
+    rtcPeer.createOffer().then(offer => rtcPeer.setLocalDescription(offer)).then(() => {
+      return roomRef.child('offer').set({
+        type: rtcPeer.localDescription.type,
+        sdp: rtcPeer.localDescription.sdp
       });
-      return;
-    }
-    
-    conn = connection;
-    setupNetworkConnection();
-  });
+    }).catch(err => {
+      console.error('Offer creation error:', err);
+      showError('Failed to create room offer. Please try again.', 'join');
+    });
 
-  peer.on('error', (err) => {
-    console.error('Peer server error:', err);
-    if (err.type === 'unavailable-id') {
-      // Regenerate room code on collision
-      hostRoom(nickname);
-    } else {
-      showError(`Hosting error: ${err.message}`, 'join');
-    }
+    // Watch for client answer
+    roomRef.child('answer').on('value', snapshot => {
+      const answer = snapshot.val();
+      if (answer && rtcPeer && !rtcPeer.currentRemoteDescription) {
+        rtcPeer.setRemoteDescription(new RTCSessionDescription(answer))
+          .catch(err => console.error('setRemoteDescription (answer) error:', err));
+      }
+    });
+
+    // Watch for client ICE candidates
+    roomRef.child('clientCandidates').on('child_added', snapshot => {
+      const candidate = snapshot.val();
+      if (candidate && rtcPeer) {
+        rtcPeer.addIceCandidate(new RTCIceCandidate(candidate))
+          .catch(err => console.error('addIceCandidate (host) error:', err));
+      }
+    });
+
+    // Auto-clean room on disconnect
+    roomRef.onDisconnect().remove();
+
+  }).catch(err => {
+    console.error('Firebase room creation error:', err);
+    // Fallback to PeerJS if Firebase fails
+    hostRoomFallback(nickname, code);
   });
 }
 
+// ---- CLIENT/JOIN FLOW ----
 function joinRoom(codeInput, nickname) {
   const code = normalizeRoomCode(codeInput);
   if (!code || code.length !== 4) {
     showError('Invalid code. Please enter a 4-digit numeric code.', 'join');
     return;
   }
-  
+
   gameState.joinerName = nickname;
-  const hostPeerId = `heartplay-love-${code}`;
-  
-  // Disable join button while attempting
+
   const joinBtn = document.getElementById('joinRoomBtn');
   joinBtn.disabled = true;
   joinBtn.textContent = 'Connecting...';
 
-  // Random alphanumeric identifier for client
-  const clientPeerId = `heartplay-client-${Math.random().toString(36).substring(2, 7)}`;
-  peer = new Peer(clientPeerId, PEER_CONFIG);
+  // 25 second join timeout
+  joinTimeoutHandle = setTimeout(() => {
+    abortJoin(joinBtn, 'Connection timed out. Make sure your partner has created the room and try again.');
+  }, 25000);
 
-  // Timeout: if connection doesn't open within 20s, show error
-  let joinTimeoutId = setTimeout(() => {
-    if (!conn || !conn.open) {
-      console.warn('Join timed out — peer connection never opened.');
-      if (peer) peer.destroy();
-      peer = null;
-      conn = null;
-      role = null;
+  const db = getFirebaseDb();
+  roomRef = db.ref(`rooms/${code}`);
+
+  roomRef.child('offer').once('value').then(snapshot => {
+    const offer = snapshot.val();
+    if (!offer) {
+      clearTimeout(joinTimeoutHandle);
       joinBtn.disabled = false;
       joinBtn.textContent = 'Join Room 💞';
-      showError('Connection timed out. Make sure your partner has created the room and try again.', 'join');
+      showError('Room not found. Check the code and make sure your partner has created the room.', 'join');
+      return;
     }
-  }, 20000);
 
-  peer.on('open', () => {
-    console.log('Connecting to host room code:', code);
-    conn = peer.connect(hostPeerId, { reliable: true });
-    setupNetworkConnection(joinTimeoutId, joinBtn);
-  });
+    rtcPeer = new RTCPeerConnection({ iceServers: ICE_SERVERS });
 
-  peer.on('error', (err) => {
-    clearTimeout(joinTimeoutId);
-    console.error('Connection joining error:', err);
-    if (peer) peer.destroy();
-    peer = null;
-    conn = null;
-    role = null;
+    // Collect ICE candidates from client side
+    rtcPeer.onicecandidate = (e) => {
+      if (e.candidate) {
+        roomRef.child('clientCandidates').push(e.candidate.toJSON());
+      }
+    };
+
+    // When data channel opens from host side
+    rtcPeer.ondatachannel = (e) => {
+      dataChannel = e.channel;
+      setupDataChannel(dataChannel);
+    };
+
+    // Set remote description (host's offer) then create answer
+    rtcPeer.setRemoteDescription(new RTCSessionDescription(offer))
+      .then(() => rtcPeer.createAnswer())
+      .then(answer => rtcPeer.setLocalDescription(answer))
+      .then(() => {
+        return roomRef.child('answer').set({
+          type: rtcPeer.localDescription.type,
+          sdp: rtcPeer.localDescription.sdp
+        });
+      })
+      .catch(err => {
+        console.error('Join signaling error:', err);
+        abortJoin(joinBtn, 'Signaling failed. Please try again.');
+      });
+
+    // Watch for host ICE candidates
+    roomRef.child('hostCandidates').on('child_added', snapshot => {
+      const candidate = snapshot.val();
+      if (candidate && rtcPeer) {
+        rtcPeer.addIceCandidate(new RTCIceCandidate(candidate))
+          .catch(err => console.error('addIceCandidate (client) error:', err));
+      }
+    });
+
+  }).catch(err => {
+    console.error('Firebase join error:', err);
+    // Fallback to PeerJS
+    clearTimeout(joinTimeoutHandle);
     joinBtn.disabled = false;
     joinBtn.textContent = 'Join Room 💞';
-    showError('Could not link to room. Verify the code and that your partner has hosted.', 'join');
+    joinRoomFallback(codeInput, nickname);
   });
 }
 
-function setupNetworkConnection(joinTimeoutId, joinBtn) {
-  conn.on('open', () => {
-    // Clear join timeout and re-enable button on success
-    if (joinTimeoutId) clearTimeout(joinTimeoutId);
-    if (joinBtn) {
-      joinBtn.disabled = false;
-      joinBtn.textContent = 'Join Room 💞';
-    }
+function abortJoin(joinBtn, message) {
+  if (rtcPeer) { rtcPeer.close(); rtcPeer = null; }
+  dataChannel = null;
+  role = null;
+  joinBtn.disabled = false;
+  joinBtn.textContent = 'Join Room 💞';
+  showError(message, 'join');
+}
+
+// ---- DATA CHANNEL SETUP ----
+function setupDataChannel(channel) {
+  channel.onopen = () => {
+    clearTimeout(joinTimeoutHandle);
+
+    // Re-enable join button if it was a client connection
+    const joinBtn = document.getElementById('joinRoomBtn');
+    joinBtn.disabled = false;
+    joinBtn.textContent = 'Join Room 💞';
+
+    // Shim conn for compatibility with existing code
+    conn = {
+      open: true,
+      send: (msg) => {
+        if (dataChannel && dataChannel.readyState === 'open') {
+          dataChannel.send(JSON.stringify(msg));
+        }
+      },
+      close: () => { if (rtcPeer) rtcPeer.close(); }
+    };
 
     sound.playChime();
-    
-    // Hide setup overlay errors
     document.getElementById('joinErrorMsg').classList.add('hidden');
-    
+
     if (role === 'host') {
-      addLog(`Partner linked up! Starting game soon...`, 'system');
+      addLog('Partner linked up! Starting game soon...', 'system');
     } else {
-      // Introduce client to host
-      sendNetworkMessage({ 
-        type: 'INTRODUCE', 
-        nickname: gameState.joinerName 
-      });
+      sendNetworkMessage({ type: 'INTRODUCE', nickname: gameState.joinerName });
     }
 
-    // Set chat to online state
     updateChatStatus(true);
-  });
 
-  conn.on('data', (data) => {
-    handleIncomingMessage(data);
-  });
+    // Start heartbeat to detect disconnects
+    startHeartbeat();
+  };
 
-  conn.on('close', () => {
+  channel.onmessage = (e) => {
+    try {
+      const data = JSON.parse(e.data);
+      if (data.type === '__HEARTBEAT__') return; // ignore pings
+      handleIncomingMessage(data);
+    } catch (err) {
+      console.error('Message parse error:', err);
+    }
+  };
+
+  channel.onclose = () => {
     handleDisconnect();
-  });
+  };
 
-  conn.on('error', (err) => {
-    console.error('Data connection error:', err);
+  channel.onerror = (err) => {
+    console.error('Data channel error:', err);
     handleDisconnect();
-  });
+  };
 }
 
+function startHeartbeat() {
+  clearInterval(heartbeatInterval);
+  heartbeatInterval = setInterval(() => {
+    if (dataChannel && dataChannel.readyState === 'open') {
+      dataChannel.send(JSON.stringify({ type: '__HEARTBEAT__' }));
+    } else if (dataChannel && dataChannel.readyState !== 'connecting') {
+      handleDisconnect();
+    }
+  }, 5000);
+}
+
+// ---- MESSAGE SENDING ----
 function sendNetworkMessage(msg) {
   if (conn && conn.open) {
     conn.send(msg);
   }
 }
 
+// ---- DISCONNECT ----
 function handleDisconnect() {
+  clearInterval(heartbeatInterval);
   sound.playBuzzer();
   addLog('Connection lost. Returning to Lobby.', 'system');
   alert('Partner disconnected. Returning to lobby setup.');
   clearRaceTimer();
-  
-  // Set chat to offline state
+
   updateChatStatus(false);
-  
-  // Reset all
-  if (peer) {
-    peer.destroy();
-  }
-  peer = null;
+
+  if (roomRef) { roomRef.off(); roomRef = null; }
+  if (rtcPeer) { rtcPeer.close(); rtcPeer = null; }
+  if (peer) { peer.destroy(); peer = null; }
+  dataChannel = null;
   conn = null;
   role = null;
-  
-  // Reset buttons
+
   document.getElementById('nicknameInput').disabled = false;
   document.getElementById('createRoomBtn').disabled = false;
   document.getElementById('roomDetailsPanel').classList.add('hidden');
-  
-  // Return screen
+
   switchScreen('lobbyScreen');
+}
+
+// ---- PEERJS FALLBACK (if Firebase is blocked/unavailable) ----
+const PEER_CONFIG_FALLBACK = {
+  config: {
+    iceServers: ICE_SERVERS
+  }
+};
+
+function hostRoomFallback(nickname, code) {
+  addLog('Using fallback connection mode...', 'system');
+  const peerId = `heartplay-love-${code}`;
+  peer = new Peer(peerId, PEER_CONFIG_FALLBACK);
+
+  peer.on('open', () => {
+    document.getElementById('roomCodeDisplay').textContent = `HEART-${code}`;
+    document.getElementById('roomDetailsPanel').classList.remove('hidden');
+    document.getElementById('nicknameInput').disabled = true;
+    document.getElementById('createRoomBtn').disabled = true;
+    addLog(`Created room HEART-${code}. Send link to your partner!`, 'system');
+  });
+
+  peer.on('connection', (connection) => {
+    if (conn) {
+      connection.on('open', () => {
+        connection.send({ type: 'REJECT', reason: 'Room is occupied!' });
+        connection.close();
+      });
+      return;
+    }
+    conn = connection;
+    setupPeerJsConnection();
+  });
+
+  peer.on('error', (err) => {
+    if (err.type === 'unavailable-id') {
+      hostRoomFallback(nickname);
+    } else {
+      showError(`Connection error: ${err.message}`, 'join');
+    }
+  });
+}
+
+function joinRoomFallback(codeInput, nickname) {
+  const code = normalizeRoomCode(codeInput);
+  gameState.joinerName = nickname;
+  const hostPeerId = `heartplay-love-${code}`;
+  const clientPeerId = `heartplay-client-${Math.random().toString(36).substring(2, 7)}`;
+
+  const joinBtn = document.getElementById('joinRoomBtn');
+  joinBtn.disabled = true;
+  joinBtn.textContent = 'Connecting...';
+
+  const fbTimeout = setTimeout(() => {
+    if (!conn || !conn.open) {
+      if (peer) peer.destroy();
+      peer = null; conn = null; role = null;
+      joinBtn.disabled = false;
+      joinBtn.textContent = 'Join Room 💞';
+      showError('Connection timed out. Verify the code and try again.', 'join');
+    }
+  }, 20000);
+
+  peer = new Peer(clientPeerId, PEER_CONFIG_FALLBACK);
+  peer.on('open', () => {
+    conn = peer.connect(hostPeerId, { reliable: true });
+    setupPeerJsConnection(fbTimeout, joinBtn);
+  });
+  peer.on('error', (err) => {
+    clearTimeout(fbTimeout);
+    if (peer) peer.destroy();
+    peer = null; conn = null; role = null;
+    joinBtn.disabled = false;
+    joinBtn.textContent = 'Join Room 💞';
+    showError('Could not link to room. Verify the code and that your partner has hosted.', 'join');
+  });
+}
+
+function setupPeerJsConnection(timeoutId, joinBtn) {
+  conn.on('open', () => {
+    if (timeoutId) clearTimeout(timeoutId);
+    if (joinBtn) { joinBtn.disabled = false; joinBtn.textContent = 'Join Room 💞'; }
+    sound.playChime();
+    document.getElementById('joinErrorMsg').classList.add('hidden');
+    if (role === 'host') {
+      addLog('Partner linked up! Starting game soon...', 'system');
+    } else {
+      sendNetworkMessage({ type: 'INTRODUCE', nickname: gameState.joinerName });
+    }
+    updateChatStatus(true);
+  });
+  conn.on('data', (data) => handleIncomingMessage(data));
+  conn.on('close', () => handleDisconnect());
+  conn.on('error', (err) => { console.error('PeerJS data error:', err); handleDisconnect(); });
 }
 
 // ==========================================================================
