@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- HeartPlay Sitemap — https://heartplay.vercel.app -->
+<!-- Submit this URL to Google Search Console: https://heartplay.vercel.app/sitemap.xml -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+
+  <url>
+    <!-- Main app page — the only page in this single-page app -->
+    <loc>https://heartplay.vercel.app/</loc>
+
+    <!-- Update this date whenever you make content/game changes -->
+    <lastmod>2026-07-10</lastmod>
+
+    <!-- How often Google should re-crawl -->
+    <changefreq>monthly</changefreq>
+
+    <!-- Priority relative to other pages on your site (1.0 = highest) -->
+    <priority>1.0</priority>
+
+    <!-- Tell Google this page is available in English -->
+    <xhtml:link
+      rel="alternate"
+      hreflang="en"
+      href="https://heartplay.vercel.app/"/>
+  </url>
+
+</urlset>

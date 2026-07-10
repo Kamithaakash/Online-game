@@ -1,0 +1,12 @@
+# robots.txt for HeartPlay — https://heartplay.vercel.app
+# Tells search engine crawlers what to index
+
+# Allow all bots to crawl everything
+User-agent: *
+Allow: /
+
+# Block crawlers from accessing PeerJS internal state (not applicable here but good practice)
+Disallow: /api/
+
+# Sitemap location — IMPORTANT: update if your domain changes
+Sitemap: https://heartplay.vercel.app/sitemap.xml
