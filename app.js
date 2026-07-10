@@ -827,59 +827,70 @@ function getFirebaseDb() {
   return firebaseDb;
 }
 
-// ---- HOST FLOW ----
 function hostRoom(nickname) {
   const code = Math.floor(1000 + Math.random() * 9000).toString();
   gameState.hostName = nickname;
   gameState.status = 'LOBBY';
 
-  const db = getFirebaseDb();
+  addLog('Connecting to signaling server...', 'system');
+
+  let db;
+  try {
+    db = getFirebaseDb();
+  } catch (e) {
+    addLog('Signaling server unavailable. Using fallback...', 'system');
+    hostRoomFallback(nickname, code);
+    return;
+  }
+
   roomRef = db.ref(`rooms/${code}`);
 
-  // Clean up any stale room first, then create fresh
   roomRef.remove().then(() => {
-    const expiresAt = Date.now() + 30 * 60 * 1000; // 30 min TTL
+    const expiresAt = Date.now() + 30 * 60 * 1000;
     return roomRef.set({ host: { nickname }, expiresAt, status: 'waiting' });
   }).then(() => {
     document.getElementById('roomCodeDisplay').textContent = `HEART-${code}`;
     document.getElementById('roomDetailsPanel').classList.remove('hidden');
     document.getElementById('nicknameInput').disabled = true;
     document.getElementById('createRoomBtn').disabled = true;
-    addLog(`Created room HEART-${code}. Send link to your partner!`, 'system');
+    addLog(`Room HEART-${code} created! Waiting for partner...`, 'system');
 
-    // Create RTCPeerConnection and data channel (host creates the offer)
     rtcPeer = new RTCPeerConnection({ iceServers: ICE_SERVERS });
     dataChannel = rtcPeer.createDataChannel('game', { ordered: true });
     setupDataChannel(dataChannel);
 
-    // Collect ICE candidates and push to Firebase
     rtcPeer.onicecandidate = (e) => {
       if (e.candidate) {
         roomRef.child('hostCandidates').push(e.candidate.toJSON());
       }
     };
 
-    // Create offer
-    rtcPeer.createOffer().then(offer => rtcPeer.setLocalDescription(offer)).then(() => {
-      return roomRef.child('offer').set({
-        type: rtcPeer.localDescription.type,
-        sdp: rtcPeer.localDescription.sdp
-      });
-    }).catch(err => {
-      console.error('Offer creation error:', err);
-      showError('Failed to create room offer. Please try again.', 'join');
-    });
+    rtcPeer.onconnectionstatechange = () => {
+      addLog(`Connection state: ${rtcPeer.connectionState}`, 'system');
+    };
 
-    // Watch for client answer
+    rtcPeer.createOffer()
+      .then(offer => rtcPeer.setLocalDescription(offer))
+      .then(() => {
+        addLog('Room offer ready. Waiting for partner to join...', 'system');
+        return roomRef.child('offer').set({
+          type: rtcPeer.localDescription.type,
+          sdp: rtcPeer.localDescription.sdp
+        });
+      }).catch(err => {
+        console.error('Offer creation error:', err);
+        showError('Failed to create room. Please try again.', 'join');
+      });
+
     roomRef.child('answer').on('value', snapshot => {
       const answer = snapshot.val();
       if (answer && rtcPeer && !rtcPeer.currentRemoteDescription) {
+        addLog('Partner found! Establishing connection...', 'system');
         rtcPeer.setRemoteDescription(new RTCSessionDescription(answer))
           .catch(err => console.error('setRemoteDescription (answer) error:', err));
       }
     });
 
-    // Watch for client ICE candidates
     roomRef.child('clientCandidates').on('child_added', snapshot => {
       const candidate = snapshot.val();
       if (candidate && rtcPeer) {
@@ -888,12 +899,11 @@ function hostRoom(nickname) {
       }
     });
 
-    // Auto-clean room on disconnect
     roomRef.onDisconnect().remove();
 
   }).catch(err => {
     console.error('Firebase room creation error:', err);
-    // Fallback to PeerJS if Firebase fails
+    addLog(`Signaling error: ${err.message || err.code || 'unknown'}. Using fallback...`, 'system');
     hostRoomFallback(nickname, code);
   });
 }
@@ -912,12 +922,28 @@ function joinRoom(codeInput, nickname) {
   joinBtn.disabled = true;
   joinBtn.textContent = 'Connecting...';
 
-  // 25 second join timeout
-  joinTimeoutHandle = setTimeout(() => {
-    abortJoin(joinBtn, 'Connection timed out. Make sure your partner has created the room and try again.');
-  }, 25000);
+  addLog('Looking up room...', 'system');
 
-  const db = getFirebaseDb();
+  // Master timeout — ALWAYS fires after 30s no matter what
+  joinTimeoutHandle = setTimeout(() => {
+    addLog('Connection timed out.', 'system');
+    if (rtcPeer) { rtcPeer.close(); rtcPeer = null; }
+    if (peer) { peer.destroy(); peer = null; }
+    dataChannel = null; conn = null; role = null;
+    joinBtn.disabled = false;
+    joinBtn.textContent = 'Join Room 💞';
+    showError('Connection timed out. Make sure your partner\'s room is open and try again.', 'join');
+  }, 30000);
+
+  let db;
+  try {
+    db = getFirebaseDb();
+  } catch (e) {
+    addLog('Signaling server unavailable, trying fallback...', 'system');
+    joinRoomFallback(codeInput, nickname, joinBtn);
+    return;
+  }
+
   roomRef = db.ref(`rooms/${code}`);
 
   roomRef.child('offer').once('value').then(snapshot => {
@@ -926,41 +952,54 @@ function joinRoom(codeInput, nickname) {
       clearTimeout(joinTimeoutHandle);
       joinBtn.disabled = false;
       joinBtn.textContent = 'Join Room 💞';
-      showError('Room not found. Check the code and make sure your partner has created the room.', 'join');
+      showError('Room not found. Check the code and make sure your partner has created the room first.', 'join');
+      addLog('Room not found in signaling server.', 'system');
       return;
     }
 
+    addLog('Room found! Connecting...', 'system');
     rtcPeer = new RTCPeerConnection({ iceServers: ICE_SERVERS });
 
-    // Collect ICE candidates from client side
     rtcPeer.onicecandidate = (e) => {
       if (e.candidate) {
         roomRef.child('clientCandidates').push(e.candidate.toJSON());
       }
     };
 
-    // When data channel opens from host side
+    rtcPeer.onconnectionstatechange = () => {
+      addLog(`Connection state: ${rtcPeer.connectionState}`, 'system');
+      if (rtcPeer.connectionState === 'failed') {
+        clearTimeout(joinTimeoutHandle);
+        joinBtn.disabled = false;
+        joinBtn.textContent = 'Join Room 💞';
+        showError('Connection failed. Both players may be behind strict firewalls. Try again.', 'join');
+      }
+    };
+
     rtcPeer.ondatachannel = (e) => {
       dataChannel = e.channel;
       setupDataChannel(dataChannel);
     };
 
-    // Set remote description (host's offer) then create answer
     rtcPeer.setRemoteDescription(new RTCSessionDescription(offer))
       .then(() => rtcPeer.createAnswer())
       .then(answer => rtcPeer.setLocalDescription(answer))
       .then(() => {
+        addLog('Answer sent. Waiting for direct connection...', 'system');
         return roomRef.child('answer').set({
           type: rtcPeer.localDescription.type,
           sdp: rtcPeer.localDescription.sdp
         });
       })
       .catch(err => {
+        clearTimeout(joinTimeoutHandle);
         console.error('Join signaling error:', err);
-        abortJoin(joinBtn, 'Signaling failed. Please try again.');
+        addLog(`Signaling error: ${err.message || err}`, 'system');
+        joinBtn.disabled = false;
+        joinBtn.textContent = 'Join Room 💞';
+        showError('Signaling failed. Please try again.', 'join');
       });
 
-    // Watch for host ICE candidates
     roomRef.child('hostCandidates').on('child_added', snapshot => {
       const candidate = snapshot.val();
       if (candidate && rtcPeer) {
@@ -970,12 +1009,12 @@ function joinRoom(codeInput, nickname) {
     });
 
   }).catch(err => {
-    console.error('Firebase join error:', err);
-    // Fallback to PeerJS
     clearTimeout(joinTimeoutHandle);
+    console.error('Firebase join error:', err);
+    addLog(`Firebase error: ${err.message || err.code || JSON.stringify(err)}`, 'system');
     joinBtn.disabled = false;
     joinBtn.textContent = 'Join Room 💞';
-    joinRoomFallback(codeInput, nickname);
+    showError(`Could not reach signaling server: ${err.message || 'Permission denied. Check Firebase rules.'}`, 'join');
   });
 }
 
