@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- HeartPlay Sitemap — https://heartplay.vercel.app -->
-<!-- Submit this URL to Google Search Console: https://heartplay.vercel.app/sitemap.xml -->
+<!-- HeartPlay Sitemap — https://couple-game-nu.vercel.app -->
+<!-- Submit this URL to Google Search Console: https://couple-game-nu.vercel.app/sitemap.xml -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
         xmlns:xhtml="http://www.w3.org/1999/xhtml">
 
   <url>
     <!-- Main app page — the only page in this single-page app -->
-    <loc>https://heartplay.vercel.app/</loc>
+    <loc>https://couple-game-nu.vercel.app/</loc>
 
     <!-- Update this date whenever you make content/game changes -->
     <lastmod>2026-07-10</lastmod>
@@ -21,7 +21,7 @@
     <xhtml:link
       rel="alternate"
       hreflang="en"
-      href="https://heartplay.vercel.app/"/>
+      href="https://couple-game-nu.vercel.app/"/>
   </url>
 
 </urlset>
