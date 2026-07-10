@@ -763,6 +763,36 @@ document.querySelectorAll('.react-btn').forEach(btn => {
 // ==========================================================================
 // NETWORK LAYER - PEERJS HOST/JOIN
 // ==========================================================================
+// Shared PeerJS config with STUN servers for cross-network NAT traversal
+const PEER_CONFIG = {
+  config: {
+    iceServers: [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' },
+      { urls: 'stun:stun2.l.google.com:19302' },
+      { urls: 'stun:stun3.l.google.com:19302' },
+      { urls: 'stun:stun4.l.google.com:19302' },
+      { urls: 'stun:stun.cloudflare.com:3478' },
+      // Free public TURN relay — needed when both peers are behind strict NAT
+      {
+        urls: 'turn:openrelay.metered.ca:80',
+        username: 'openrelayproject',
+        credential: 'openrelayproject'
+      },
+      {
+        urls: 'turn:openrelay.metered.ca:443',
+        username: 'openrelayproject',
+        credential: 'openrelayproject'
+      },
+      {
+        urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+        username: 'openrelayproject',
+        credential: 'openrelayproject'
+      }
+    ]
+  }
+};
+
 function hostRoom(nickname) {
   // Generate random 4-digit room code
   const code = Math.floor(1000 + Math.random() * 9000).toString();
@@ -771,7 +801,7 @@ function hostRoom(nickname) {
   gameState.hostName = nickname;
   gameState.status = 'LOBBY';
   
-  peer = new Peer(peerId);
+  peer = new Peer(peerId, PEER_CONFIG);
 
   peer.on('open', (id) => {
     console.log('Room opened on PeerServer. Peer ID:', id);
@@ -818,24 +848,57 @@ function joinRoom(codeInput, nickname) {
   gameState.joinerName = nickname;
   const hostPeerId = `heartplay-love-${code}`;
   
+  // Disable join button while attempting
+  const joinBtn = document.getElementById('joinRoomBtn');
+  joinBtn.disabled = true;
+  joinBtn.textContent = 'Connecting...';
+
   // Random alphanumeric identifier for client
   const clientPeerId = `heartplay-client-${Math.random().toString(36).substring(2, 7)}`;
-  peer = new Peer(clientPeerId);
+  peer = new Peer(clientPeerId, PEER_CONFIG);
+
+  // Timeout: if connection doesn't open within 20s, show error
+  let joinTimeoutId = setTimeout(() => {
+    if (!conn || !conn.open) {
+      console.warn('Join timed out — peer connection never opened.');
+      if (peer) peer.destroy();
+      peer = null;
+      conn = null;
+      role = null;
+      joinBtn.disabled = false;
+      joinBtn.textContent = 'Join Room 💞';
+      showError('Connection timed out. Make sure your partner has created the room and try again.', 'join');
+    }
+  }, 20000);
 
   peer.on('open', () => {
     console.log('Connecting to host room code:', code);
-    conn = peer.connect(hostPeerId);
-    setupNetworkConnection();
+    conn = peer.connect(hostPeerId, { reliable: true });
+    setupNetworkConnection(joinTimeoutId, joinBtn);
   });
 
   peer.on('error', (err) => {
+    clearTimeout(joinTimeoutId);
     console.error('Connection joining error:', err);
+    if (peer) peer.destroy();
+    peer = null;
+    conn = null;
+    role = null;
+    joinBtn.disabled = false;
+    joinBtn.textContent = 'Join Room 💞';
     showError('Could not link to room. Verify the code and that your partner has hosted.', 'join');
   });
 }
 
-function setupNetworkConnection() {
+function setupNetworkConnection(joinTimeoutId, joinBtn) {
   conn.on('open', () => {
+    // Clear join timeout and re-enable button on success
+    if (joinTimeoutId) clearTimeout(joinTimeoutId);
+    if (joinBtn) {
+      joinBtn.disabled = false;
+      joinBtn.textContent = 'Join Room 💞';
+    }
+
     sound.playChime();
     
     // Hide setup overlay errors
