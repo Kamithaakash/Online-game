@@ -774,11 +774,15 @@ async function loadFirebaseConfig() {
   if (FIREBASE_CONFIG) return FIREBASE_CONFIG;
   try {
     const res = await fetch('/api/firebase-config');
-    if (!res.ok) throw new Error(`Config endpoint returned ${res.status}`);
+    if (!res.ok) {
+      const body = await res.text();
+      throw new Error(`Config endpoint returned ${res.status}: ${body}`);
+    }
     FIREBASE_CONFIG = await res.json();
     return FIREBASE_CONFIG;
   } catch (err) {
     console.error('Failed to load Firebase config:', err);
+    showError(`Signaling server config error: ${err.message}. Check Vercel environment variables.`, 'join');
     throw err;
   }
 }
@@ -940,7 +944,7 @@ async function joinRoom(codeInput, nickname) {
     if (peer) { peer.destroy(); peer = null; }
     dataChannel = null; conn = null; role = null;
     joinBtn.disabled = false;
-    joinBtn.textContent = 'Join Room 💞';
+    joinBtn.textContent = 'Join Nest';
     showError('Connection timed out. Make sure your partner\'s room is open and try again.', 'join');
   }, 30000);
 
@@ -948,8 +952,11 @@ async function joinRoom(codeInput, nickname) {
   try {
     db = await getFirebaseDb();
   } catch (e) {
-    addLog('Signaling server unavailable, trying fallback...', 'system');
-    joinRoomFallback(codeInput, nickname, joinBtn);
+    clearTimeout(joinTimeoutHandle);
+    joinBtn.disabled = false;
+    joinBtn.textContent = 'Join Nest';
+    addLog(`Signaling server error: ${e.message}`, 'system');
+    // showError already called inside loadFirebaseConfig
     return;
   }
 
