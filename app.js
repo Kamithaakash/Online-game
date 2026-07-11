@@ -765,16 +765,23 @@ document.querySelectorAll('.react-btn').forEach(btn => {
 // Works reliably across all home networks and locations.
 // ==========================================================================
 
-// --- Firebase Configuration (HeartPlay signaling project) ---
-const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyAdFvVEAPuUXY9UXTbeWetVDmE8uk2SCd0",
-  authDomain: "heartplay-signaling.firebaseapp.com",
-  databaseURL: "https://heartplay-signaling-default-rtdb.firebaseio.com",
-  projectId: "heartplay-signaling",
-  storageBucket: "heartplay-signaling.firebasestorage.app",
-  messagingSenderId: "504455810734",
-  appId: "1:504455810734:web:ebe0ce13a04d2cda0ca73f"
-};
+// --- Firebase Configuration ---
+// Loaded at runtime from /api/firebase-config (Vercel serverless function).
+// The API key lives ONLY in Vercel environment variables — never in source code.
+let FIREBASE_CONFIG = null;
+
+async function loadFirebaseConfig() {
+  if (FIREBASE_CONFIG) return FIREBASE_CONFIG;
+  try {
+    const res = await fetch('/api/firebase-config');
+    if (!res.ok) throw new Error(`Config endpoint returned ${res.status}`);
+    FIREBASE_CONFIG = await res.json();
+    return FIREBASE_CONFIG;
+  } catch (err) {
+    console.error('Failed to load Firebase config:', err);
+    throw err;
+  }
+}
 
 // ICE servers: multiple STUN + free TURN relays for maximum compatibility
 const ICE_SERVERS = [
@@ -815,19 +822,21 @@ let heartbeatInterval = null;
 let peer = null;
 let conn = null;
 
-function getFirebaseDb() {
+// Returns a Promise<FirebaseDatabase> — must be awaited
+async function getFirebaseDb() {
   if (firebaseDb) return firebaseDb;
+  const config = await loadFirebaseConfig();
   try {
     // Try to reuse existing app
     firebaseApp = firebase.app();
   } catch (e) {
-    firebaseApp = firebase.initializeApp(FIREBASE_CONFIG);
+    firebaseApp = firebase.initializeApp(config);
   }
   firebaseDb = firebase.database();
   return firebaseDb;
 }
 
-function hostRoom(nickname) {
+async function hostRoom(nickname) {
   const code = Math.floor(1000 + Math.random() * 9000).toString();
   gameState.hostName = nickname;
   gameState.status = 'LOBBY';
@@ -836,7 +845,7 @@ function hostRoom(nickname) {
 
   let db;
   try {
-    db = getFirebaseDb();
+    db = await getFirebaseDb();
   } catch (e) {
     addLog('Signaling server unavailable. Using fallback...', 'system');
     hostRoomFallback(nickname, code);
@@ -909,7 +918,7 @@ function hostRoom(nickname) {
 }
 
 // ---- CLIENT/JOIN FLOW ----
-function joinRoom(codeInput, nickname) {
+async function joinRoom(codeInput, nickname) {
   const code = normalizeRoomCode(codeInput);
   if (!code || code.length !== 4) {
     showError('Invalid code. Please enter a 4-digit numeric code.', 'join');
@@ -937,7 +946,7 @@ function joinRoom(codeInput, nickname) {
 
   let db;
   try {
-    db = getFirebaseDb();
+    db = await getFirebaseDb();
   } catch (e) {
     addLog('Signaling server unavailable, trying fallback...', 'system');
     joinRoomFallback(codeInput, nickname, joinBtn);
