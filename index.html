@@ -159,11 +159,15 @@
           <div id="roomDetailsPanel" class="room-details hidden">
             <div class="divider"></div>
             <p class="share-text">Share this room code with your partner:</p>
-            <div class="code-container">
-              <span id="roomCodeDisplay" class="room-code">HEART-XXXX</span>
-              <button id="copyCodeBtn" class="btn btn-small" title="Copy Code">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-              </button>
+                      <h2 id="roomCodeDisplay">HEART-XXXX</h2>
+              <div class="flex-center-gap" style="margin-top: 0.5rem;">
+                <button id="copyCodeBtn" class="btn-icon" aria-label="Copy Room Code">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                </button>
+                <button id="shareLinkBtn" class="btn-icon" aria-label="Copy Share Link" title="Copy Direct Invite Link">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><polyline points="16 6 12 2 8 6"></polyline><line x1="12" y1="2" x2="12" y2="15"></line></svg>
+                </button>
+              </div>
             </div>
             <div class="pulse-loader"></div>
             <span class="status-msg">Waiting for partner to link up...</span>
@@ -744,9 +748,10 @@
                 Never have I ever...
               </div>
               
-              <div class="input-action-wrapper" id="nhieVoteBtnArea" style="justify-content: center; gap: 1rem; margin-top: 1.5rem;">
+              <div class="input-action-wrapper" id="nhieVoteBtnArea" style="justify-content: center; gap: 1rem; margin-top: 1.5rem; flex-wrap: wrap;">
                 <button id="nhieHaveBtn" class="btn btn-danger btn-large">I Have 😈</button>
                 <button id="nhieHaveNotBtn" class="btn btn-primary btn-large">I Haven't 😇</button>
+                <button id="nhieSkipBtn" class="btn btn-secondary btn-large" style="flex-basis: 100%; max-width: 250px; margin-top: 0.5rem;">Skip ⏭️</button>
               </div>
 
               <div class="waiting-animation hidden" id="nhieWaitingPartner">
