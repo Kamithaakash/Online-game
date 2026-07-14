@@ -3176,8 +3176,10 @@ function renderUI() {
     // Highlight winner card
     const hostCard = document.getElementById('rpsRevealHostCard');
     const clientCard = document.getElementById('rpsRevealClientCard');
-    hostCard.classList.remove('winner-card-host');
-    clientCard.classList.remove('winner-card-client');
+    
+    // Reset classes
+    hostCard.classList.remove('winner-card-host', 'loser-card');
+    clientCard.classList.remove('winner-card-client', 'loser-card');
     
     const emojiEl = document.getElementById('rpsResultEmoji');
     const titleEl = document.getElementById('rpsResultTitle');
@@ -3196,21 +3198,23 @@ function renderUI() {
       
       const getRpsComparisonText = (wWeapon, lWeapon) => {
         if (wWeapon === 'paper' && lWeapon === 'rock') {
-          return 'Love Letter wraps the Rock! ✉️ > 🪨';
+          return 'Love Letter SMOTHERS Rock with affection! 😍 💌 > 🪨';
         }
         if (wWeapon === 'scissors' && lWeapon === 'paper') {
-          return 'Scissors cut the Love Letter! ✂️ > ✉️';
+          return 'Scissors SHREDS the Love Letter! ✂️ 💥 💌';
         }
         if (wWeapon === 'rock' && lWeapon === 'scissors') {
-          return 'Rock smashes the Scissors! 🪨 > ✂️';
+          return 'Rock SMASHES Scissors to dust! 🪨 💥 ✂️';
         }
         return '';
       };
       
       if (winIsHost) {
         hostCard.classList.add('winner-card-host');
+        clientCard.classList.add('loser-card');
       } else {
         clientCard.classList.add('winner-card-client');
+        hostCard.classList.add('loser-card');
       }
       
       emojiEl.textContent = isMeWinner ? '🎉' : '🥺';
@@ -3222,17 +3226,33 @@ function renderUI() {
     const rpsRevealMarker = `end-rps-${gameState.round}`;
     if (document.getElementById('stepRpsReveal').getAttribute('data-marker') !== rpsRevealMarker) {
       document.getElementById('stepRpsReveal').setAttribute('data-marker', rpsRevealMarker);
-      if (gameState.winner === 'tie') {
-        sound.playChime();
-      } else {
-        const isMeWinner = (role === gameState.winner);
-        if (isMeWinner) {
-          sound.playSuccess();
-          triggerConfettiShower();
-        } else {
-          sound.playChime();
-        }
+      
+      // Reset animation by re-triggering overlay
+      const overlay = document.getElementById('rpsDramaticOverlay');
+      if (overlay) {
+        overlay.classList.remove('rps-dramatic-overlay');
+        void overlay.offsetWidth; // trigger reflow
+        overlay.classList.add('rps-dramatic-overlay');
       }
+
+      // Play dramatic sound sequence
+      sound.playTap();
+      setTimeout(() => sound.playTap(), 800);
+      setTimeout(() => sound.playTap(), 1600);
+
+      setTimeout(() => {
+        if (gameState.winner === 'tie') {
+          sound.playChime();
+        } else {
+          const isMeWinner = (role === gameState.winner);
+          if (isMeWinner) {
+            sound.playSuccess();
+            triggerConfettiShower();
+          } else {
+            sound.playBuzzer();
+          }
+        }
+      }, 3500); // Wait for CSS animation to finish
     }
   }
 
