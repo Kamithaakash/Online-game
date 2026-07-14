@@ -970,9 +970,9 @@ async function joinRoom(codeInput, nickname) {
 
   roomRef = db.ref(`rooms/${code}`);
 
-  roomRef.child('offer').once('value').then(snapshot => {
-    const offer = snapshot.val();
-    if (!offer) {
+  roomRef.once('value').then(snapshot => {
+    const roomData = snapshot.val();
+    if (!roomData) {
       clearTimeout(joinTimeoutHandle);
       joinBtn.disabled = false;
       joinBtn.textContent = 'Join Room 💞';
@@ -981,55 +981,65 @@ async function joinRoom(codeInput, nickname) {
       return;
     }
 
-    addLog('Room found! Connecting...', 'system');
-    rtcPeer = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+    addLog('Room found! Waiting for connection data...', 'system');
 
-    rtcPeer.onicecandidate = (e) => {
-      if (e.candidate) {
-        roomRef.child('clientCandidates').push(e.candidate.toJSON());
-      }
-    };
+    const offerListener = roomRef.child('offer').on('value', offerSnap => {
+      const offer = offerSnap.val();
+      if (!offer) return; // Wait until the host writes the offer
+      
+      // Found the offer, stop listening
+      roomRef.child('offer').off('value', offerListener);
 
-    rtcPeer.onconnectionstatechange = () => {
-      addLog(`Connection state: ${rtcPeer.connectionState}`, 'system');
-      if (rtcPeer.connectionState === 'failed') {
-        clearTimeout(joinTimeoutHandle);
-        joinBtn.disabled = false;
-        joinBtn.textContent = 'Join Room 💞';
-        showError('Connection failed. Both players may be behind strict firewalls. Try again.', 'join');
-      }
-    };
+      addLog('Offer received! Connecting...', 'system');
+      rtcPeer = new RTCPeerConnection({ iceServers: ICE_SERVERS });
 
-    rtcPeer.ondatachannel = (e) => {
-      dataChannel = e.channel;
-      setupDataChannel(dataChannel);
-    };
+      rtcPeer.onicecandidate = (e) => {
+        if (e.candidate) {
+          roomRef.child('clientCandidates').push(e.candidate.toJSON());
+        }
+      };
 
-    rtcPeer.setRemoteDescription(new RTCSessionDescription(offer))
-      .then(() => rtcPeer.createAnswer())
-      .then(answer => rtcPeer.setLocalDescription(answer))
-      .then(() => {
-        addLog('Answer sent. Waiting for direct connection...', 'system');
-        return roomRef.child('answer').set({
-          type: rtcPeer.localDescription.type,
-          sdp: rtcPeer.localDescription.sdp
+      rtcPeer.onconnectionstatechange = () => {
+        addLog(`Connection state: ${rtcPeer.connectionState}`, 'system');
+        if (rtcPeer.connectionState === 'failed') {
+          clearTimeout(joinTimeoutHandle);
+          joinBtn.disabled = false;
+          joinBtn.textContent = 'Join Room 💞';
+          showError('Connection failed. Both players may be behind strict firewalls. Try again.', 'join');
+        }
+      };
+
+      rtcPeer.ondatachannel = (e) => {
+        dataChannel = e.channel;
+        setupDataChannel(dataChannel);
+      };
+
+      rtcPeer.setRemoteDescription(new RTCSessionDescription(offer))
+        .then(() => rtcPeer.createAnswer())
+        .then(answer => rtcPeer.setLocalDescription(answer))
+        .then(() => {
+          addLog('Answer sent. Waiting for direct connection...', 'system');
+          return roomRef.child('answer').set({
+            type: rtcPeer.localDescription.type,
+            sdp: rtcPeer.localDescription.sdp
+          });
+        })
+        .catch(err => {
+          clearTimeout(joinTimeoutHandle);
+          console.error('Join signaling error:', err);
+          addLog(`Signaling error: ${err.message || err}`, 'system');
+          joinBtn.disabled = false;
+          joinBtn.textContent = 'Join Room 💞';
+          showError('Signaling failed. Please try again.', 'join');
         });
-      })
-      .catch(err => {
-        clearTimeout(joinTimeoutHandle);
-        console.error('Join signaling error:', err);
-        addLog(`Signaling error: ${err.message || err}`, 'system');
-        joinBtn.disabled = false;
-        joinBtn.textContent = 'Join Room 💞';
-        showError('Signaling failed. Please try again.', 'join');
-      });
 
-    roomRef.child('hostCandidates').on('child_added', snapshot => {
-      const candidate = snapshot.val();
-      if (candidate && rtcPeer) {
-        rtcPeer.addIceCandidate(new RTCIceCandidate(candidate))
-          .catch(err => console.error('addIceCandidate (client) error:', err));
-      }
+      roomRef.child('hostCandidates').on('child_added', snapshot => {
+        const candidate = snapshot.val();
+        if (candidate && rtcPeer) {
+          rtcPeer.addIceCandidate(new RTCIceCandidate(candidate))
+            .catch(err => console.error('addIceCandidate (client) error:', err));
+        }
+      });
     });
 
   }).catch(err => {
