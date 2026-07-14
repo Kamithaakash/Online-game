@@ -1025,10 +1025,11 @@ async function joinRoom(codeInput, nickname) {
   }).catch(err => {
     clearTimeout(joinTimeoutHandle);
     console.error('Firebase join error:', err);
-    addLog(`Firebase error: ${err.message || err.code || JSON.stringify(err)}`, 'system');
+    addLog(`Firebase error: ${err.message || err.code || JSON.stringify(err)}. Trying fallback...`, 'system');
     joinBtn.disabled = false;
-    joinBtn.textContent = 'Join Room 💞';
-    showError(`Could not reach signaling server: ${err.message || 'Permission denied. Check Firebase rules.'}`, 'join');
+    joinBtn.textContent = 'Join Nest';
+    // Fall back to PeerJS signaling (mirrors hostRoom's fallback behavior)
+    joinRoomFallback(codeInput, nickname);
   });
 }
 
@@ -3800,17 +3801,20 @@ function showToast(message, type = 'info', duration = 3000) {
   if (!joinInput) return;
 
   joinInput.addEventListener('input', () => {
+    // Get raw text, uppercase it, strip everything non-alphanumeric
     let raw = joinInput.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
 
-    // Strip any leading HEART prefix they may have typed
+    // Strip the HEART prefix so user can paste "HEART-1234" or type "HEART1234"
+    // Only strip if the string starts with "HEART" (5 chars) so digits typed first are preserved
     if (raw.startsWith('HEART')) {
-      raw = raw.replace(/^HEART/, '');
+      raw = raw.substring(5); // remove exactly the first 5 chars "HEART"
     }
 
-    // Keep only the last 4 alphanumeric chars for the code portion
+    // Keep only up to 4 chars of the actual code
     raw = raw.slice(0, 4);
 
     if (raw.length > 0) {
+      // Preserve cursor: set value then restore caret to end
       joinInput.value = `HEART-${raw}`;
     } else {
       joinInput.value = '';
