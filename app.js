@@ -292,8 +292,6 @@ const sound = new SoundFX();
 // GAME ENGINE & NETWORK STATE
 // ==========================================================================
 let role = null; // 'host' or 'client'
-let peer = null;
-let conn = null;
 let raceTimerInterval = null;
 let lastTimeLeft = null;
 
@@ -822,7 +820,7 @@ let roomRef = null;
 let joinTimeoutHandle = null;
 let heartbeatInterval = null;
 
-// Shim the old PeerJS globals so nothing else in the file breaks
+// PeerJS fallback globals (used alongside WebRTC)
 let peer = null;
 let conn = null;
 
