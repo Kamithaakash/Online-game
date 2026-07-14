@@ -3976,3 +3976,154 @@ body {
   color: #ff4d6d;
 }
 
+/* ==========================================================================
+   ROCK PAPER SCISSORS - FUNNY ANIMATIONS & OVERLAY
+   ========================================================================== */
+.rps-dramatic-overlay {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(8px);
+  z-index: 50;
+  border-radius: 20px;
+  animation: overlayFadeOut 0.5s ease-out 3.2s forwards;
+  overflow: hidden;
+}
+
+@keyframes overlayFadeOut {
+  to { opacity: 0; visibility: hidden; }
+}
+
+.rps-countdown-text {
+  position: absolute;
+  font-family: var(--font-heading);
+  font-size: 3.5rem;
+  font-weight: 800;
+  color: var(--primary);
+  text-shadow: 3px 3px 0 #fff, 6px 6px 0 rgba(255,77,109,0.3);
+  opacity: 0;
+  transform: scale(0.5);
+}
+
+.rps-countdown-text.step-1 { animation: countPop 0.8s ease-out 0.2s; }
+.rps-countdown-text.step-2 { animation: countPop 0.8s ease-out 1.0s; }
+.rps-countdown-text.step-3 { animation: countPop 0.8s ease-out 1.8s; }
+.rps-countdown-text.step-4 { 
+  animation: countPopFinal 1.0s ease-out 2.6s; 
+  font-size: 5.5rem; 
+  color: var(--danger); 
+  text-transform: uppercase;
+}
+
+@keyframes countPop {
+  0% { opacity: 0; transform: scale(0.5) rotate(-5deg); }
+  30% { opacity: 1; transform: scale(1.1) rotate(2deg); }
+  80% { opacity: 1; transform: scale(1) rotate(0deg); }
+  100% { opacity: 0; transform: scale(1.3) rotate(5deg); filter: blur(2px); }
+}
+
+@keyframes countPopFinal {
+  0% { opacity: 0; transform: scale(0.1) rotate(-15deg); }
+  30% { opacity: 1; transform: scale(1.2) rotate(10deg); }
+  80% { opacity: 1; transform: scale(1) rotate(0deg); }
+  100% { opacity: 0; transform: scale(2.5); filter: blur(5px); }
+}
+
+@keyframes loserShrink {
+  0% { transform: scale(1) rotate(0deg); filter: grayscale(0); }
+  20% { transform: scale(1.05) rotate(3deg); }
+  100% { transform: scale(0.85) rotate(-5deg); filter: grayscale(1) opacity(0.5); }
+}
+
+.rps-reveal-card.loser-card {
+  animation: loserShrink 0.6s ease-out 3.5s forwards !important;
+}
+
+.rps-reveal-grid {
+  animation: popInScale 0.5s ease-out 3.2s both;
+}
+
+#rpsResultBanner {
+  animation: slideUpFade 0.5s ease-out 3.5s both;
+}
+
+@keyframes popInScale {
+  0% { opacity: 0; transform: scale(0.8); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes slideUpFade {
+  0% { opacity: 0; transform: translateY(20px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+/* RPS NEW ANIMATIONS */
+@keyframes screenShake {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  10%, 30%, 50%, 70%, 90% { transform: translate(-10px, 5px) rotate(-2deg); }
+  20%, 40%, 60%, 80% { transform: translate(10px, -5px) rotate(2deg); }
+}
+
+.shake-animation {
+  animation: screenShake 0.4s cubic-bezier(.36,.07,.19,.97) both;
+}
+
+/* Rock Winner: Jumps high and smashes down */
+@keyframes winnerRockSmash {
+  0% { transform: scale(1) translateY(0); z-index: 10; }
+  30% { transform: scale(1.3) translateY(-60px); z-index: 10; }
+  60% { transform: scale(1.4) translateY(-80px); z-index: 10; }
+  100% { transform: scale(1.2) translateY(30px); z-index: 10; }
+}
+.winner-card-rock { animation: winnerRockSmash 0.8s cubic-bezier(0.25, 1, 0.5, 1) 3.5s forwards !important; z-index: 10; }
+
+/* Scissors Loser (to Rock): Gets squished flat */
+@keyframes loserScissorsSquish {
+  0% { transform: scale(1) translateY(0); }
+  80% { transform: scale(1) translateY(0); }
+  100% { transform: scale(1.2, 0.1) translateY(60px); opacity: 0.5; filter: grayscale(1); }
+}
+.loser-card-scissors { animation: loserScissorsSquish 1.0s ease-out 3.5s forwards !important; }
+
+/* Paper Winner: Grows massive and smothers */
+@keyframes winnerPaperSmother {
+  0% { transform: scale(1); z-index: 10; }
+  100% { transform: scale(2.5); opacity: 0.9; z-index: 10; }
+}
+.winner-card-paper { animation: winnerPaperSmother 0.8s ease-out 3.5s forwards !important; z-index: 10; }
+
+/* Rock Loser (to Paper): Shrinks and fades as if swallowed */
+@keyframes loserRockSwallow {
+  0% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(0); opacity: 0; filter: grayscale(1); }
+}
+.loser-card-rock { animation: loserRockSwallow 0.8s ease-in 3.5s forwards !important; }
+
+/* Scissors Winner: Darts side to side slicing */
+@keyframes winnerScissorsSlice {
+  0% { transform: scale(1) translateX(0); z-index: 10; }
+  30% { transform: scale(1.2) translateX(-40px) rotate(-15deg); z-index: 10; }
+  70% { transform: scale(1.2) translateX(40px) rotate(15deg); z-index: 10; }
+  100% { transform: scale(1.1) translateX(0) rotate(0); z-index: 10; }
+}
+.winner-card-scissors { animation: winnerScissorsSlice 0.8s cubic-bezier(0.25, 1, 0.5, 1) 3.5s forwards !important; z-index: 10; }
+
+/* Paper Loser (to Scissors): Spin and drop (sliced in half) */
+@keyframes loserPaperSlice {
+  0% { transform: scale(1) rotate(0deg); opacity: 1; }
+  40% { transform: scale(1) rotate(0deg); opacity: 1; }
+  100% { transform: scale(0.5) translateY(100px) rotate(45deg); opacity: 0; filter: grayscale(1); }
+}
+.loser-card-paper { animation: loserPaperSlice 1.0s ease-in 3.5s forwards !important; }
+
+/* Tie Animation: Both bump into each other */
+@keyframes tieBump {
+  0% { transform: scale(1) translateX(0); }
+  50% { transform: scale(1.1) translateX(15px); }
+  100% { transform: scale(1) translateX(0); }
+}
+.tie-card-host { animation: tieBump 0.5s ease-out 3.5s forwards !important; }
+.tie-card-client { animation: tieBump 0.5s ease-out 3.5s forwards !important; animation-direction: reverse; }

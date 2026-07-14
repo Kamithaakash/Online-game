@@ -454,20 +454,24 @@ document.getElementById('closeModalOkBtn').addEventListener('click', closeModal)
 document.getElementById('soundToggleBtn').addEventListener('click', () => {
   const isSoundOn = sound.toggle();
   sound.playTap();
+  localStorage.setItem('heartplay_sound', isSoundOn ? 'on' : 'off');
   document.getElementById('soundOnIcon').classList.toggle('hidden', !isSoundOn);
   document.getElementById('soundOffIcon').classList.toggle('hidden', isSoundOn);
 });
 
 // Setup Lobby Controls
-document.getElementById('createRoomBtn').addEventListener('click', () => {
+document.getElementById('createRoomBtn').addEventListener('click', (e) => {
   sound.playTap();
+  e.target.disabled = true;
+  e.target.textContent = 'Creating... ⏳';
   const nameInput = document.getElementById('nicknameInput').value.trim();
   const nickname = nameInput || getRandomNickname();
+  localStorage.setItem('heartplay_nickname', nickname);
   role = 'host';
   hostRoom(nickname);
 });
 
-document.getElementById('joinRoomBtn').addEventListener('click', () => {
+document.getElementById('joinRoomBtn').addEventListener('click', (e) => {
   sound.playTap();
   const nameInput = document.getElementById('nicknameInput').value.trim();
   const codeInput = document.getElementById('joinCodeInput').value.trim();
@@ -478,6 +482,7 @@ document.getElementById('joinRoomBtn').addEventListener('click', () => {
     return;
   }
   
+  localStorage.setItem('heartplay_nickname', nickname);
   role = 'client';
   joinRoom(codeInput, nickname);
 });
@@ -596,6 +601,11 @@ function submitQuizAnswer() {
 document.getElementById('quizMatchBtn').addEventListener('click', () => {
   sound.playTap();
   triggerAction({ type: 'ACTION_QUIZ_EVALUATE', approved: true });
+});
+
+document.getElementById('nhieSkipBtn')?.addEventListener('click', () => {
+  sound.playTap();
+  triggerAction({ type: 'ACTION_NEXT_NHIE_ROUND' });
 });
 
 document.getElementById('quizMismatchBtn').addEventListener('click', () => {
@@ -1126,7 +1136,10 @@ function handleDisconnect() {
 
   updateChatStatus(false);
 
-  if (roomRef) { roomRef.off(); roomRef = null; }
+  if (roomRef) { 
+    if (role === 'host') { roomRef.remove(); } else { roomRef.off(); }
+    roomRef = null; 
+  }
   if (rtcPeer) { rtcPeer.close(); rtcPeer = null; }
   if (peer) { peer.destroy(); peer = null; }
   dataChannel = null;
@@ -1711,6 +1724,7 @@ function processSelectGame(gameType) {
     addLog(`--- Game Mode: SOS started! ---`, 'system');
   } else if (gameType === 'QUIZ') {
     gameState.status = 'QUIZ_PLAY';
+    shuffleArray(quizQuestions);
     gameState.quizIndex = 0;
     gameState.quizAnswers = { host: '', client: '' };
     gameState.quizMatches = 0;
@@ -1737,8 +1751,10 @@ function processSelectGame(gameType) {
     addLog(`--- Game Mode: Intimate Truth or Dare started! ---`, 'system');
   } else if (gameType === 'NHIE') {
     gameState.status = 'NHIE_PLAY';
-    // NHIE requires a prompt right away to show on the first screen
-    gameState.nhieCurrentPrompt = nhieStatements[Math.floor(Math.random() * nhieStatements.length)];
+    gameState.nhieHistory = [];
+    let prompt = nhieStatements[Math.floor(Math.random() * nhieStatements.length)];
+    gameState.nhieHistory.push(prompt);
+    gameState.nhieCurrentPrompt = prompt;
     gameState.nhieAnswers = { host: '', client: '' };
     gameState.nhieScores = { host: 0, client: 0 };
     addLog(`--- Game Mode: Never Have I Ever started! ---`, 'system');
@@ -1895,7 +1911,7 @@ function processSosRestart() {
   sound.playSuccess();
 }
 
-const quizQuestions = [
+let quizQuestions = [
   "Where was our first date (or where did we first meet)?",
   "Who is more likely to fall asleep during a movie?",
   "What is your partner's ultimate comfort food?",
@@ -1905,8 +1921,35 @@ const quizQuestions = [
   "If you could travel anywhere together tomorrow, where would you go?",
   "Who is the more organized one in the relationship?",
   "What is your partner's favorite movie or TV show?",
-  "What is your favorite memory together so far?"
+  "What is your favorite memory together so far?",
+  "What is my weirdest habit?",
+  "Who takes longer to get ready?",
+  "What is my go-to karaoke song?",
+  "Who is more likely to start an argument over nothing?",
+  "What is my favorite physical feature of yours?",
+  "If we won the lottery, what is the first thing we would buy?",
+  "Who is more romantic?",
+  "What is my favorite season of the year?",
+  "Who is more likely to survive a zombie apocalypse?",
+  "What is my dream job?",
+  "Who is more stubborn?",
+  "What is my favorite dessert?",
+  "Who is the better driver?",
+  "Who spends more time on their phone?",
+  "What is my biggest fear?",
+  "Who is more likely to get a speeding ticket?",
+  "What is my favorite way to relax?",
+  "Who is more adventurous in bed?",
+  "What is my favorite drink?",
+  "Who is more likely to cry during a sad movie?"
 ];
+
+function shuffleArray(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+}
 
 function processQuizSubmit(answer, submitter) {
   if (gameState.status !== 'QUIZ_PLAY') return;
@@ -1956,6 +1999,7 @@ function processQuizEvaluate(approved) {
 
 function processQuizRestart() {
   gameState.status = 'QUIZ_PLAY';
+  shuffleArray(quizQuestions);
   gameState.quizIndex = 0;
   gameState.quizAnswers = { host: '', client: '' };
   gameState.quizMatches = 0;
@@ -2229,7 +2273,16 @@ function processNhieVote(vote, voterRole) {
 
 function processNextNhieRound() {
   gameState.status = 'NHIE_PLAY';
-  gameState.nhieCurrentPrompt = nhieStatements[Math.floor(Math.random() * nhieStatements.length)];
+  let available = nhieStatements.filter(s => !(gameState.nhieHistory || []).includes(s));
+  if (available.length === 0) {
+      gameState.nhieHistory = [];
+      available = nhieStatements;
+  }
+  let nextPrompt = available[Math.floor(Math.random() * available.length)];
+  if (!gameState.nhieHistory) gameState.nhieHistory = [];
+  gameState.nhieHistory.push(nextPrompt);
+  gameState.nhieCurrentPrompt = nextPrompt;
+  
   gameState.nhieAnswers = { host: '', client: '' };
   gameState.round++;
   
@@ -2267,13 +2320,71 @@ const rpScenarios = [
     roleB: "The Student: Desperate to pass by any means necessary.",
     objA: "Make them describe exactly what they'll do to pass.",
     objB: "Offer to do something completely inappropriate to raise your grade."
+  },
+  {
+    title: "The Delivery Driver & Lonely Housewife/Husband",
+    desc: "A delivery driver arrives with a package that needs a 'special signature'.",
+    roleA: "The Driver: Hot, sweaty, and definitely noticing the customer's attire.",
+    roleB: "The Customer: Wearing something entirely inappropriate for opening the door.",
+    objA: "Ask to come inside for a glass of water.",
+    objB: "Pretend you don't have cash for a tip and offer an alternative."
+  },
+  {
+    title: "The Strict Personal Trainer",
+    desc: "An intense personal training session after hours at the gym.",
+    roleA: "The Trainer: Demanding perfection and very hands-on.",
+    roleB: "The Client: Exhausted but extremely turned on by the authority.",
+    objA: "Punish them for bad form with a physical consequence.",
+    objB: "Beg for a 'rest' by offering a different kind of workout."
+  },
+  {
+    title: "The Maid & The Billionaire",
+    desc: "Cleaning a massive penthouse suite when the owner suddenly arrives early.",
+    roleA: "The Billionaire: Used to getting whatever they want, whenever they want.",
+    roleB: "The Maid: Caught snooping in the bedroom and looking for a way out of trouble.",
+    objA: "Demand they clean a specific area very, very slowly.",
+    objB: "Offer a 'deep clean' to keep your job."
+  },
+  {
+    title: "The Burglary Gone Wrong",
+    desc: "A masked intruder breaks into a house, but the owner was awake and waiting.",
+    roleA: "The Intruder: Caught off guard and tied up by the surprisingly prepared owner.",
+    roleB: "The Owner: Completely in control and ready to interrogate.",
+    objA: "Try to negotiate your release using only your body.",
+    objB: "Search the intruder thoroughly for 'hidden weapons'."
+  },
+  {
+    title: "The Jealous Ex-Lover at a Wedding",
+    desc: "Crashing a mutual friend's wedding to confront a former lover.",
+    roleA: "The Ex: Drunk on champagne, jealous, and reckless.",
+    roleB: "The Guest: Trying to keep things quiet but unable to resist the tension.",
+    objA: "Corner them in the coat closet and make them admit they miss you.",
+    objB: "Try to push them away but fail miserably."
+  },
+  {
+    title: "The Vampire & The Willing Victim",
+    desc: "A seductive immortal corners a human who has been seeking them out.",
+    roleA: "The Vampire: Hungry, ancient, and deeply sensual.",
+    roleB: "The Human: Terrified but entirely mesmerized and willing.",
+    objA: "Hypnotize them into exposing their neck and begging for the bite.",
+    objB: "Offer yourself completely and describe how it feels."
+  },
+  {
+    title: "The Cop & The Speeding Driver",
+    desc: "Pulled over on a deserted highway in the middle of the night.",
+    roleA: "The Officer: Stern, authoritative, and demanding a reason not to write a ticket.",
+    roleB: "The Driver: Flirtatious and willing to do anything to avoid the fine.",
+    objA: "Order them out of the car for a 'pat down'.",
+    objB: "Suggest a way to pay the fine right here, right now."
   }
 ];
 
 function processRoleplayGenerate() {
   if (gameState.status !== 'ROLEPLAY_PLAY') return;
   
-  const scenario = rpScenarios[Math.floor(Math.random() * rpScenarios.length)];
+  let available = rpScenarios.filter(s => s.title !== gameState.rpScenarioTitle);
+  if (available.length === 0) available = rpScenarios;
+  const scenario = available[Math.floor(Math.random() * available.length)];
   
   gameState.rpScenarioTitle = scenario.title;
   gameState.rpScenarioDesc = scenario.desc;
@@ -2371,8 +2482,10 @@ function processRouletteStart() {
   clearInterval(rouletteInterval);
   rouletteInterval = setInterval(() => {
     gameState.rouletteTimer--;
+    let stateChanged = false;
     
     if (gameState.rouletteTimer <= 0) {
+      stateChanged = true;
       if (gameState.rouletteStateText === 'FINISH!') {
         clearInterval(rouletteInterval);
         gameState.rouletteStateText = 'DONE';
@@ -2392,7 +2505,9 @@ function processRouletteStart() {
       }
     }
     
-    broadcastState();
+    if (stateChanged) {
+      broadcastState();
+    }
     renderUI();
   }, 1000);
 }
@@ -2424,6 +2539,7 @@ function startRaceTimer() {
 }
 
 function clearRaceTimer() {
+  lastTimeLeft = null;
   if (role === 'host') {
     clearInterval(raceTimerInterval);
   }
@@ -2493,6 +2609,7 @@ function submitRaceWord() {
 
   // Client/Host launches validation trigger
   sendTypingIndicator(false);
+  if (inputEl) inputEl.blur(); // Dismiss mobile keyboard
   triggerAction({ type: 'ACTION_SUBMIT_RACE_WORD', word: word });
 }
 
@@ -2526,6 +2643,9 @@ async function checkWordInDictionary(word) {
   }
   
   console.error("Dictionary data is missing!");
+  if (typeof showToast === 'function') {
+    showToast("Dictionary loading, passing to partner for approval...", "warning", 3500);
+  }
   return false; 
 }
 
@@ -2574,7 +2694,7 @@ function renderUI() {
   const myName = isHost ? gameState.hostName : gameState.joinerName;
   const partnerName = isHost ? gameState.joinerName : gameState.hostName;
   
-  document.getElementById('hostPlayerName').textContent = gameState.hostName;
+  document.getElementById('hostPlayerName').innerHTML = `${gameState.hostName} <span style="font-size: 0.8em;" title="Host">🏠</span>`;
   document.getElementById('joinerPlayerName').textContent = gameState.joinerName;
   
   // Scores display
@@ -2818,42 +2938,47 @@ function renderUI() {
 
     // Draw SOS board
     const gridContainer = document.getElementById('sosGridContainer');
-    gridContainer.innerHTML = '';
+    const currentSosState = JSON.stringify(gameState.sosBoard) + JSON.stringify(gameState.completedSosLines) + isMyTurn;
     
-    const getSelectedLetter = () => {
-      const radio = document.querySelector('input[name="sosLetter"]:checked');
-      return radio ? radio.value : 'S';
-    };
+    if (gridContainer.getAttribute('data-sos-state') !== currentSosState) {
+      gridContainer.setAttribute('data-sos-state', currentSosState);
+      gridContainer.innerHTML = '';
+      
+      const getSelectedLetter = () => {
+        const radio = document.querySelector('input[name="sosLetter"]:checked');
+        return radio ? radio.value : 'S';
+      };
 
-    for (let i = 0; i < 36; i++) {
-      const cell = document.createElement('div');
-      cell.className = 'sos-cell';
-      const cellVal = gameState.sosBoard[i];
-      
-      if (cellVal !== '') {
-        cell.textContent = cellVal;
-        cell.classList.add('placed', `letter-${cellVal}`);
-      }
-      
-      // Highlight matching cell lines
-      gameState.completedSosLines.forEach(line => {
-        if (line.cells.includes(i)) {
-          if (line.owner === 'host') {
-            cell.classList.add('sos-cell-match-host');
-          } else {
-            cell.classList.add('sos-cell-match-client');
-          }
+      for (let i = 0; i < 36; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'sos-cell';
+        const cellVal = gameState.sosBoard[i];
+        
+        if (cellVal !== '') {
+          cell.textContent = cellVal;
+          cell.classList.add('placed', `letter-${cellVal}`);
         }
-      });
-      
-      if (cellVal === '' && isMyTurn) {
-        cell.addEventListener('click', () => {
-          const letter = getSelectedLetter();
-          triggerAction({ type: 'ACTION_SOS_MOVE', cellIndex: i, letter: letter });
+        
+        // Highlight matching cell lines
+        gameState.completedSosLines.forEach(line => {
+          if (line.cells.includes(i)) {
+            if (line.owner === 'host') {
+              cell.classList.add('sos-cell-match-host');
+            } else {
+              cell.classList.add('sos-cell-match-client');
+            }
+          }
         });
+        
+        if (cellVal === '' && isMyTurn) {
+          cell.addEventListener('click', () => {
+            const letter = getSelectedLetter();
+            triggerAction({ type: 'ACTION_SOS_MOVE', cellIndex: i, letter: letter });
+          });
+        }
+        
+        gridContainer.appendChild(cell);
       }
-      
-      gridContainer.appendChild(cell);
     }
   }
 
@@ -3051,8 +3176,10 @@ function renderUI() {
     // Highlight winner card
     const hostCard = document.getElementById('rpsRevealHostCard');
     const clientCard = document.getElementById('rpsRevealClientCard');
-    hostCard.classList.remove('winner-card-host');
-    clientCard.classList.remove('winner-card-client');
+    
+    // Reset classes
+    hostCard.classList.remove('winner-card-host', 'loser-card', 'winner-card-rock', 'loser-card-rock', 'winner-card-paper', 'loser-card-paper', 'winner-card-scissors', 'loser-card-scissors', 'tie-card-host', 'tie-card-client');
+    clientCard.classList.remove('winner-card-client', 'loser-card', 'winner-card-rock', 'loser-card-rock', 'winner-card-paper', 'loser-card-paper', 'winner-card-scissors', 'loser-card-scissors', 'tie-card-host', 'tie-card-client');
     
     const emojiEl = document.getElementById('rpsResultEmoji');
     const titleEl = document.getElementById('rpsResultTitle');
@@ -3062,6 +3189,8 @@ function renderUI() {
       emojiEl.textContent = '🤝';
       titleEl.textContent = "It's a Tie! 💖";
       detailEl.textContent = `You both chose ${rpsDetails[hostWeapon].label}!`;
+      hostCard.classList.add('tie-card-host');
+      clientCard.classList.add('tie-card-client');
     } else {
       const winIsHost = (gameState.winner === 'host');
       const isMeWinner = (role === gameState.winner);
@@ -3071,21 +3200,23 @@ function renderUI() {
       
       const getRpsComparisonText = (wWeapon, lWeapon) => {
         if (wWeapon === 'paper' && lWeapon === 'rock') {
-          return 'Love Letter wraps the Rock! ✉️ > 🪨';
+          return 'Love Letter completely SMOTHERS Rock! 💌 💋 🪨';
         }
         if (wWeapon === 'scissors' && lWeapon === 'paper') {
-          return 'Scissors cut the Love Letter! ✂️ > ✉️';
+          return 'Scissors violently SHREDS the Love Letter! ✂️ 💥 💌';
         }
         if (wWeapon === 'rock' && lWeapon === 'scissors') {
-          return 'Rock smashes the Scissors! 🪨 > ✂️';
+          return 'Rock relentlessly SMASHES Scissors to pieces! 🪨 💥 ✂️';
         }
         return '';
       };
       
       if (winIsHost) {
-        hostCard.classList.add('winner-card-host');
+        hostCard.classList.add(`winner-card-${winnerWeapon}`);
+        clientCard.classList.add(`loser-card-${loserWeapon}`);
       } else {
-        clientCard.classList.add('winner-card-client');
+        clientCard.classList.add(`winner-card-${winnerWeapon}`);
+        hostCard.classList.add(`loser-card-${loserWeapon}`);
       }
       
       emojiEl.textContent = isMeWinner ? '🎉' : '🥺';
@@ -3097,17 +3228,44 @@ function renderUI() {
     const rpsRevealMarker = `end-rps-${gameState.round}`;
     if (document.getElementById('stepRpsReveal').getAttribute('data-marker') !== rpsRevealMarker) {
       document.getElementById('stepRpsReveal').setAttribute('data-marker', rpsRevealMarker);
-      if (gameState.winner === 'tie') {
-        sound.playChime();
-      } else {
-        const isMeWinner = (role === gameState.winner);
-        if (isMeWinner) {
-          sound.playSuccess();
-          triggerConfettiShower();
-        } else {
-          sound.playChime();
-        }
+      
+      // Reset animation by re-triggering overlay
+      const overlay = document.getElementById('rpsDramaticOverlay');
+      if (overlay) {
+        overlay.classList.remove('rps-dramatic-overlay');
+        void overlay.offsetWidth; // trigger reflow
+        overlay.classList.add('rps-dramatic-overlay');
       }
+
+      // Trigger screen shake right when "SHOOT!" hits (at 2.6s)
+      const container = document.getElementById('stepRpsReveal');
+      if (container) {
+        container.classList.remove('shake-animation');
+        setTimeout(() => {
+          container.classList.add('shake-animation');
+        }, 2600);
+      }
+
+      // Play dramatic sound sequence
+      sound.playTap();
+      setTimeout(() => sound.playTap(), 800);
+      setTimeout(() => sound.playTap(), 1600);
+      setTimeout(() => sound.playChime(), 2600); // Screen shake moment
+      setTimeout(() => sound.playTap(), 1600);
+
+      setTimeout(() => {
+        if (gameState.winner === 'tie') {
+          sound.playChime();
+        } else {
+          const isMeWinner = (role === gameState.winner);
+          if (isMeWinner) {
+            sound.playSuccess();
+            triggerConfettiShower();
+          } else {
+            sound.playBuzzer();
+          }
+        }
+      }, 3500); // Wait for CSS animation to finish
     }
   }
 
@@ -3554,6 +3712,10 @@ function toggleChatPanel(forceState) {
 }
 
 function sendChatMessage(customText) {
+  if (!conn || !conn.open) {
+      if (typeof showToast === 'function') showToast('Not connected yet!', 'error');
+      return;
+  }
   const chatInput = document.getElementById('chatInput');
   if (!chatInput) return;
 
@@ -3757,6 +3919,22 @@ function updateChatStatus(isOnline) {
 // Auto-initialize chat sidebar on script load
 initChatWidget();
 
+// Load localStorage preferences
+(function loadSavedPreferences() {
+  const savedName = localStorage.getItem('heartplay_nickname');
+  if (savedName) {
+    const nickInput = document.getElementById('nicknameInput');
+    if (nickInput) nickInput.value = savedName;
+  }
+  
+  const savedSound = localStorage.getItem('heartplay_sound');
+  if (savedSound === 'off') {
+    sound.toggle();
+    document.getElementById('soundOnIcon').classList.add('hidden');
+    document.getElementById('soundOffIcon').classList.remove('hidden');
+  }
+})();
+
 // ==========================================================================
 // QUALITY OF LIFE IMPROVEMENTS
 // ==========================================================================
@@ -3879,6 +4057,15 @@ function showToast(message, type = 'info', duration = 3000) {
       if (indicator) { indicator.textContent = ''; indicator.className = 'word-validation-indicator'; }
     };
   }
+
+  // QoL 15 fix: also clear indicator when processNextRound triggers and clears the input
+  const origProcessNextRound = window.processNextRound;
+  if (typeof origProcessNextRound === 'function') {
+    window.processNextRound = function() {
+      origProcessNextRound.call(this, ...arguments);
+      if (indicator) { indicator.textContent = ''; indicator.className = 'word-validation-indicator'; }
+    };
+  }
 })();
 
 // ── #4 BEFORE-UNLOAD DISCONNECT WARNING ──────────────────────────────────
@@ -3894,7 +4081,7 @@ window.addEventListener('beforeunload', (e) => {
     'TOD_PLAY', 'TOD_RESULT', 'NHIE_PLAY', 'NHIE_RESULT',
     'ROLEPLAY_PLAY', 'TEASE_PLAY', 'TEASE_RESULT', 'ROULETTE_PLAY'
   ];
-  if (conn && activeGameStatuses.includes(gameState.status)) {
+  if ((conn || dataChannel) && activeGameStatuses.includes(gameState.status)) {
     e.preventDefault();
     e.returnValue = 'Your partner will be disconnected. Are you sure you want to leave?';
     return e.returnValue;
@@ -3908,26 +4095,21 @@ window.addEventListener('beforeunload', (e) => {
  * Also shows a toast confirming the copy.
  */
 (function initShareLinkCopy() {
-  const copyBtn = document.getElementById('copyCodeBtn');
-  if (!copyBtn) return;
+  const shareBtn = document.getElementById('shareLinkBtn');
+  if (!shareBtn) return;
 
-  // Remove old listener by cloning the button
-  const newCopyBtn = copyBtn.cloneNode(true);
-  copyBtn.parentNode.replaceChild(newCopyBtn, copyBtn);
-
-  newCopyBtn.addEventListener('click', () => {
+  shareBtn.addEventListener('click', () => {
     sound.playTap();
     const roomCodeText = document.getElementById('roomCodeDisplay').textContent;
     const digits = roomCodeText.replace('HEART-', '');
     const shareUrl = `${window.location.origin}${window.location.pathname}?room=${digits}`;
 
     navigator.clipboard.writeText(shareUrl).then(() => {
-      const origInner = newCopyBtn.innerHTML;
-      newCopyBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2ec4b6" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+      const origInner = shareBtn.innerHTML;
+      shareBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2ec4b6" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
       showToast(`Share link copied! Send it to your partner 💌`, 'success', 3500);
-      setTimeout(() => { newCopyBtn.innerHTML = origInner; }, 2000);
+      setTimeout(() => { shareBtn.innerHTML = origInner; }, 2000);
     }).catch(() => {
-      // Fallback: copy just the code
       navigator.clipboard.writeText(roomCodeText);
       showToast(`Room code "${roomCodeText}" copied!`, 'info');
     });
